@@ -4,7 +4,6 @@ using namespace Rcpp;
 #include <vector>
 using namespace std;
 
-// [[Rcpp::plugins(cpp11)]]
 // [[Rcpp::export]]
 List calcGseaStatCumulativeBatch(
         NumericVector const& stats,
