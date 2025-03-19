@@ -119,8 +119,8 @@ collection from MSigDB database.
 
 ```{r}
 library(msigdbr)
-pathwaysDF <- msigdbr("mouse", category="H")
-pathways <- split(as.character(pathwaysDF$entrez_gene), pathwaysDF$gs_name)
+pathwaysDF <- msigdbr("mouse", collection="H")
+pathways <- split(as.character(pathwaysDF$ncbi_gene), pathwaysDF$gs_name)
 ```
 
 Now we can run GESECA analysis:
@@ -258,8 +258,12 @@ Following the authors we are going to use KEGG pathway collection.
 ```{r}
 library(msigdbr)
 
-pathwaysDF <- msigdbr("mouse", category="C2", subcategory = "CP:KEGG")
+pathwaysDF <- msigdbr("mouse", collection="C2", subcollection = "CP:KEGG_LEGACY")
 pathways <- split(pathwaysDF$gene_symbol, pathwaysDF$gs_name)
+
+# The code above requires msigdbdf package (https://igordot.r-universe.dev/msigdbdf) to be installed to get the full list of pathways.
+# For this vignette we use presaved KEGG pathways.
+pathways <- readRDS(url("https://alserglab.wustl.edu/files/fgsea/example_kegg_pathways.rds"))
 ```
 
 Now we can run the analysis (we set `center=FALSE` because we use the 
@@ -328,7 +332,7 @@ We will use HALLMARK pathways as the gene set collection.
 
 ```{r}
 library(msigdbr)
-pathwaysDF <- msigdbr("human", category="H")
+pathwaysDF <- msigdbr("human", collection="H")
 pathways <- split(pathwaysDF$gene_symbol, pathwaysDF$gs_name)
 ```
 
