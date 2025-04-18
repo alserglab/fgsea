@@ -68,7 +68,7 @@ void EsRuler::duplicateSamples() {
 EsRuler::SampleChunks::SampleChunks(int chunksNumber) : chunkSum(chunksNumber), chunks(chunksNumber) {}
 
 void EsRuler::extend(double ES, int seed, double eps) {
-    mt19937 gen(seed);
+    random_engine_t gen(seed);
 
     for (int sampleId = 0; sampleId < sampleSize; sampleId++) {
         currentSamples[sampleId] = combination(0, ranks.size() - 1, pathwaySize, gen);
@@ -182,7 +182,7 @@ int EsRuler::chunkLen(int ind) {
 }
 
 int EsRuler::perturbate(const vector<double> &ranks, int k, EsRuler::SampleChunks &sampleChunks,
-               double bound, mt19937 &rng) {
+               double bound, random_engine_t &rng) {
     double pertPrmtr = 0.1;
     int n = (int) ranks.size();
     uid_wrapper uid_n(0, n - 1, rng);

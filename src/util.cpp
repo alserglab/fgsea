@@ -5,7 +5,7 @@
 
 // generate k numbers from [a, b] - closed interval
 // a should be non-negative, usually 0 or 1
-std::vector<int> combination(const int &a, const int &b, const int &k, std::mt19937& rng) {
+std::vector<int> combination(const int &a, const int &b, const int &k, random_engine_t& rng) {
     // std::uniform_int_distribution<int> uni(a, b);
     uid_wrapper uni(a, b, rng);
     std::vector<int> v;
@@ -44,13 +44,13 @@ std::vector<int> combination(const int &a, const int &b, const int &k, std::mt19
 }
 
 #ifdef USE_STD_UID
-uid_wrapper::uid_wrapper(int _from, int _to, std::mt19937& _rng) : rng(_rng), uid(_from, _to) {}
+uid_wrapper::uid_wrapper(int _from, int _to, random_engine_t& _rng) : rng(_rng), uid(_from, _to) {}
 
 int uid_wrapper::operator()() {
     return uid(rng);
 }
 #else
-uid_wrapper::uid_wrapper(int _from, int _to, std::mt19937& _rng) : from(_from), len(_to - _from + 1), rng(_rng) {
+uid_wrapper::uid_wrapper(int _from, int _to, random_engine_t& _rng) : from(_from), len(_to - _from + 1), rng(_rng) {
     unsigned maxVal = rng.max();
     completePart = maxVal - maxVal % len;
 }
