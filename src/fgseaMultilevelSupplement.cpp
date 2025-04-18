@@ -68,7 +68,7 @@ void EsRuler::duplicateSamples() {
 EsRuler::SampleChunks::SampleChunks(int chunksNumber) : chunkSum(chunksNumber), chunks(chunksNumber) {}
 
 void EsRuler::extend(double ES, int seed, double eps) {
-    random_engine_t gen(seed);
+    random_engine_t gen(static_cast<uint32_t>(seed));
 
     for (int sampleId = 0; sampleId < sampleSize; sampleId++) {
         currentSamples[sampleId] = combination(0, ranks.size() - 1, pathwaySize, gen);

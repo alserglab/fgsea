@@ -59,7 +59,7 @@ void ScoreRuler::duplicateSampleElements(){
 }
 
 void ScoreRuler::extend(double inpScore, int seed, double eps) {
-    random_engine_t mtGen(seed);
+    random_engine_t mtGen(static_cast<uint32_t>(seed));
 
     // fill currentSample
     for (unsigned elemIndex = 0; elemIndex < sampleSize; elemIndex++) {
