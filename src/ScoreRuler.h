@@ -4,6 +4,8 @@
 #include <vector>
 #include <random>
 #include <algorithm>
+
+#include "util.h"
 #include "ScoreCalculation.h"
 
 
@@ -26,7 +28,7 @@ private:
 
     void duplicateSampleElements();
     int updateElement(std::vector<unsigned> & element, std::vector<float> & profile,
-                      double threshold, std::mt19937 &mtGen);
+                      double threshold, random_engine_t & mtGen);
 public:
     ScoreRuler(const std::vector<std::vector<float> > & inpE,
                unsigned inpSampleSize, unsigned inpGenesetSize);
