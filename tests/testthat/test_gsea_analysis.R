@@ -29,7 +29,7 @@ test_that("fgseaSimple works", {
     expect_false(all(fgseaRes$nMoreExtreme %% 2 == 0))
 })
 
-test_that("fgseaSimple is reproducable independent of bpparam settings", {
+test_that("fgseaSimple is reproducible independent of bpparam settings", {
 
     data(examplePathways)
     data(exampleRanks)
@@ -254,4 +254,17 @@ test_that("leadingEdge interacts correctly with scoreType", {
     frNeg <- fgseaSimple(pp, exampleRanks, nperm=nperm, scoreType = "neg")
     expect_true(exampleRanks[frNeg$leadingEdge[[1]][1] ] < 0)
     expect_true(exampleRanks[frNeg$leadingEdge[[2]][1] ] < 0)
+})
+
+test_that("fgseaSimple is reproducible between platforms, issues #170, #80", {
+    feats <- c(3, -1, -4.1, 42, 0, 12, 13, -13, 0.01, 0)
+    names(feats) <- paste0("gene", 1:length(feats))
+
+    some_sets <- list(
+        "pathway1" = c("gene2", "gene3"),
+        "pathway4" = paste0("gene", 1:7)
+    )
+    set.seed(42)
+    fr <- fgseaSimple(some_sets, feats, nproc = 1, nperm=1000)
+    expect_identical(fr$nMoreExtreme, c(123, 80))
 })
