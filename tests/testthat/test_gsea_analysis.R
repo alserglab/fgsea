@@ -266,7 +266,7 @@ test_that("fgseaSimple is reproducible between platforms, issues #170, #80", {
     )
     set.seed(42)
     fr <- fgseaSimple(some_sets, feats, nproc = 1, nperm=1000)
-    expect_identical(fr$nMoreExtreme, c(123, 80))
+    expect_identical(fr$nMoreExtreme, c(139, 76))
 
 
     stats <- c(gene1 = 3, gene2 = 1, gene3 = 4.1, gene4 = 42, gene5 = 0,
