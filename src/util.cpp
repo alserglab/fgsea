@@ -27,7 +27,6 @@ std::vector<int> combination(const int &a, const int &b, const int &k, random_en
         }
     } else {
         for (int r = n - k; r < n; ++r){
-            // int x = std::uniform_int_distribution<>(0, r)(rng);
             int x = uid_wrapper(0, r, rng)();
             if (!used[x]){
                 v.push_back(a + x);
@@ -37,7 +36,13 @@ std::vector<int> combination(const int &a, const int &b, const int &k, random_en
                 used[r] = true;
             }
         }
-        std::shuffle(v.begin(), v.end(), rng);
+
+        // Fisher–Yates (Knuth) shuffle
+        for (int i = v.size() - 1; i > 0; --i) {
+            // pick j in [0..i]
+            int j = uid_wrapper(0, i, rng)();
+            std::swap(v[i], v[j]);
+        }
     }
 
     return v;

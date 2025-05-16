@@ -281,5 +281,6 @@ test_that("fgseaSimple is reproducible between platforms, issues #170, #80", {
     res <- .Call("_fgsea_calcGseaStatCumulativeBatch", PACKAGE = "fgsea", stats,
                  gseaParam , pathwayScores, pathwaysSizes, iterations, seed, scoreType)
 
-    expect_identical(res$geEs, c(987, 37))
+    expect_identical(res$leEs, c(35, 968))
+    expect_identical(res$geEs, c(981, 32))
 })
