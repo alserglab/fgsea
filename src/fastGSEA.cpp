@@ -365,7 +365,7 @@ NumericVector calcRandomGseaStatCumulative(
         int n,
         int k,
         double gseaParam,
-        std::mt19937& rng,
+        random_engine_t& rng,
         std::string scoreType
 ) {
 
@@ -398,7 +398,7 @@ List calcGseaStatCumulativeBatch(
     LogicalVector aux;
     NumericVector diff;
 
-    std::mt19937 rng(seed);
+    random_engine_t rng(static_cast<uint32_t>(seed));
 
     for (int i = 0; i < iterations; ++i) {
         NumericVector randEs = calcRandomGseaStatCumulative(stats, n, k, gseaParam, rng, scoreType);

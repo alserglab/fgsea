@@ -59,7 +59,7 @@ void ScoreRuler::duplicateSampleElements(){
 }
 
 void ScoreRuler::extend(double inpScore, int seed, double eps) {
-    std::mt19937 mtGen(seed);
+    random_engine_t mtGen(static_cast<uint32_t>(seed));
 
     // fill currentSample
     for (unsigned elemIndex = 0; elemIndex < sampleSize; elemIndex++) {
@@ -133,7 +133,7 @@ std::pair<double, double> ScoreRuler::getPvalue(double inpScore, double eps){
 int ScoreRuler::updateElement(std::vector<unsigned> & element,
                               std::vector<float> & profile,
                               double threshold,
-                              std::mt19937 &mtGen){
+                              random_engine_t &mtGen){
     // unsigned n = expressionMatrix.size();
 
     uid_wrapper uid_n(0, n - 1, mtGen);

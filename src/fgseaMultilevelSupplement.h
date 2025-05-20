@@ -7,6 +7,8 @@
 #include <cmath>
 #include <algorithm>
 
+#include "util.h"
+
 
 using namespace std;
 
@@ -35,7 +37,7 @@ private:
     };
 
     int perturbate(const vector<double> &ranks, int k, SampleChunks &cusSampleChunks,
-               double bound, mt19937 &rng);
+               double bound, random_engine_t& rng);
 
     int chunkLen(int ind);
 

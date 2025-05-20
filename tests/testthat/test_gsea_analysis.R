@@ -29,7 +29,7 @@ test_that("fgseaSimple works", {
     expect_false(all(fgseaRes$nMoreExtreme %% 2 == 0))
 })
 
-test_that("fgseaSimple is reproducable independent of bpparam settings", {
+test_that("fgseaSimple is reproducible independent of bpparam settings", {
 
     data(examplePathways)
     data(exampleRanks)
@@ -254,4 +254,33 @@ test_that("leadingEdge interacts correctly with scoreType", {
     frNeg <- fgseaSimple(pp, exampleRanks, nperm=nperm, scoreType = "neg")
     expect_true(exampleRanks[frNeg$leadingEdge[[1]][1] ] < 0)
     expect_true(exampleRanks[frNeg$leadingEdge[[2]][1] ] < 0)
+})
+
+test_that("fgseaSimple is reproducible between platforms, issues #170, #80", {
+    feats <- c(3, -1, -4.1, 42, 0, 12, 13, -13, 0.01, 0)
+    names(feats) <- paste0("gene", 1:length(feats))
+
+    some_sets <- list(
+        "pathway1" = c("gene2", "gene3"),
+        "pathway4" = paste0("gene", 1:7)
+    )
+    set.seed(42)
+    fr <- fgseaSimple(some_sets, feats, nproc = 1, nperm=1000)
+    expect_identical(fr$nMoreExtreme, c(139, 76))
+
+
+    stats <- c(gene1 = 3, gene2 = 1, gene3 = 4.1, gene4 = 42, gene5 = 0,
+               gene6 = 12, gene7 = 13,  gene8 = 13, gene9 = 0.01,  gene10 = 0)
+    gseaParam <- 1
+    pathwayScores <- c(pathway1 = -0.875, pathway4 = 0.932)
+    pathwaysSizes <- c(pathway1 = 2L, pathway4 = 7L)
+    iterations <- 1000
+    seed <- 707850213
+    scoreType <- "std"
+
+    res <- .Call("_fgsea_calcGseaStatCumulativeBatch", PACKAGE = "fgsea", stats,
+                 gseaParam , pathwayScores, pathwaysSizes, iterations, seed, scoreType)
+
+    expect_identical(res$leEs, c(35, 968))
+    expect_identical(res$geEs, c(981, 32))
 })
