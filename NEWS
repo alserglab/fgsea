@@ -1,4 +1,8 @@
 CHANGES IN VERSION 1.33.3
+* more reproducibility between platforms (fix #170), but the exact results differ from previous versions.
+
+
+CHANGES IN VERSION 1.33.3
 * update code for using `msigdbr` in geseca vignette
 
 CHANGES IN VERSION 1.31.6
