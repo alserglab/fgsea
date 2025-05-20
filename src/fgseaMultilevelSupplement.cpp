@@ -1,9 +1,15 @@
 #include "fgseaMultilevelSupplement.h"
-#include "esCalculation.h"
-#include "util.h"
+#include <Rcpp.h>
 
-double betaMeanLog(unsigned long a, unsigned long b) {
-    return boost::math::digamma(a) - boost::math::digamma(b + 1);
+void my_assert(bool x, string msg) {
+    if (!x) {
+        std::cerr << "FAIL" << " " << msg << std::endl;
+        throw;
+    }
+}
+
+double getVarPerLevel(unsigned long k, unsigned long n){
+    return boost::math::trigamma(k) - boost::math::trigamma(n + 1);
 }
 
 pair<double, bool> calcLogCorrection(const vector<unsigned int> &probCorrector,
@@ -24,61 +30,148 @@ pair<double, bool> calcLogCorrection(const vector<unsigned int> &probCorrector,
     }
 }
 
-EsRuler::EsRuler(const vector<double> &inpRanks, unsigned int inpSampleSize, unsigned int inpPathwaySize) :
-    ranks(inpRanks), sampleSize(inpSampleSize), pathwaySize(inpPathwaySize) {
+EsRuler::EsRuler(const vector<double> &inpRanks,
+                 unsigned int inpSampleSize,
+                 unsigned int inpPathwaySize,
+                 double inpMovesScale,
+                 bool inpLog) :
+    logStatus(inpLog),
+    doubleRanks(inpRanks),
+    ranks(scaleRanks(doubleRanks)),
+    geneHashes(inpRanks.size()),
+    sampleSize(inpSampleSize),
+    pathwaySize(inpPathwaySize),
+    movesScale(inpMovesScale) {
     currentSamples.resize(inpSampleSize);
+
 }
 
 EsRuler::~EsRuler() = default;
 
-void EsRuler::duplicateSamples() {
-    /*
-     * Removes samples with an enrichment score less than the median value and
-     * replaces them with samples with an enrichment score greater than the median
-     * value
-    */
-    vector<pair<double, int> > stats(sampleSize);
+vector<int64_t> EsRuler::scaleRanks(vector<double> const& ranks) {
+    int64_t const MAX_NS = score_t::getMaxNS();
+    double const curNS = accumulate(ranks.begin(), ranks.end(), double(0));
+    vector<int64_t> result(ranks.size());
+    double const scale = MAX_NS / curNS;
+    if (logStatus) {
+        Rcpp::Rcout << "Scaling ranks by " << scale << endl;
+    }
+    for (int i = 0; i < int(ranks.size()); ++i) {
+        result[i] = int64_t(ranks[i] * scale);
+    }
+    return result;
+}
+
+bool EsRuler::resampleGenesets(mt19937 &rng) {
+    vector<pair<gsea_t, int>> stats(sampleSize);
     vector<int> posEsIndxs;
     int totalPosEsCount = 0;
-
+    
     for (int sampleId = 0; sampleId < sampleSize; sampleId++) {
-        double sampleEsPos = calcPositiveES(ranks, currentSamples[sampleId]);
-        double sampleEs = calcES(ranks, currentSamples[sampleId]);
-        if (sampleEs > 0) {
+        auto sampleEsPos = calcPositiveES(ranks, currentSamples[sampleId]);
+        auto sampleEs = calcES(ranks, currentSamples[sampleId]);
+        if (sampleEs.getNumerator() > 0) {
             totalPosEsCount++;
             posEsIndxs.push_back(sampleId);
         }
-        stats[sampleId] = make_pair(sampleEsPos, sampleId);
+        hash_t sampleHash = calcHash(currentSamples[sampleId]);
+        stats[sampleId] = {gsea_t{sampleEsPos, sampleHash}, sampleId};
     }
     sort(stats.begin(), stats.end());
-    for (int sampleId = 0; 2 * sampleId < sampleSize; sampleId++) {
-        enrichmentScores.push_back(stats[sampleId].first);
-        if (find(posEsIndxs.begin(), posEsIndxs.end(), stats[sampleId].second) != posEsIndxs.end()) {
-            totalPosEsCount--;
+    
+    int startFrom = 0;
+
+    auto choose_median = [&] {
+        auto centralValue = stats[sampleSize / 2].first;
+        for (int sampleId = 0; sampleId < sampleSize; sampleId++){
+            if (stats[sampleId].first >= centralValue) {
+                startFrom = sampleId;
+                break;
+            }
         }
-        probCorrector.push_back(totalPosEsCount);
+
+        if (startFrom == 0) {
+            while (startFrom < sampleSize && stats[startFrom].first == stats[0].first) {
+                ++startFrom;
+            }
+        }
+    };
+    auto choose_min = [&] {
+        while (startFrom < sampleSize && stats[startFrom].first == stats[0].first) {
+            ++startFrom;
+        }
+    };
+
+    choose_median();
+    // choose_min();
+    
+    if (startFrom == sampleSize) {
+        if (logStatus) {
+            Rcpp::Rcout << "all values are equal!\n";
+        }
+        return true;
+    }
+    
+    levels.emplace_back();
+    levels.back().bound = stats[startFrom - 1].first;   //  greater
+    for (int i = 0; i < startFrom; ++i) {
+        levels.back().lowScores.push_back(stats[i].first);
+    }
+    for (int i = startFrom; i < sampleSize; ++i) {
+        levels.back().highScores.push_back(stats[i].first);
     }
 
+    uniform_int_distribution<> uid(0, sampleSize - startFrom - 1);
+
+    auto gen_new_sample = [&] {
+        int ind = uid(rng) + startFrom;
+        return currentSamples[stats[ind].second];
+    };
+
     vector<vector<int> > new_sets;
-    for (int sampleId = 0; 2 * sampleId < sampleSize - 2; sampleId++) {
-        for (int rep = 0; rep < 2; rep++) {
-            new_sets.push_back(currentSamples[stats[sampleSize - 1 - sampleId].second]);
-        }
+    for (int i = 0; i < startFrom; i++){
+        new_sets.push_back(gen_new_sample());
     }
-    new_sets.push_back(currentSamples[stats[sampleSize >> 1].second]);
+    for (int i = startFrom; i < sampleSize; ++i) {
+        new_sets.push_back(currentSamples[stats[i].second]);
+    }
+    oldSamplesStart = startFrom;
+
     swap(currentSamples, new_sets);
+
+    return true;
 }
 
 EsRuler::SampleChunks::SampleChunks(int chunksNumber) : chunkSum(chunksNumber), chunks(chunksNumber) {}
 
+EsRuler::hash_t EsRuler::calcHash(const vector<int>& curSample) {
+    hash_t res = 0;
+    for (int i : curSample) {
+        res ^= geneHashes[i];
+    }
+    return res;
+}
+
 void EsRuler::extend(double ES, int seed, double eps) {
     mt19937 gen(seed);
+    int const n = (int) ranks.size();
+    int const k = pathwaySize;
+
+    for (int i = 0; i < n; ++i) {
+        geneHashes[i] = gen();
+    }
 
     for (int sampleId = 0; sampleId < sampleSize; sampleId++) {
         currentSamples[sampleId] = combination(0, ranks.size() - 1, pathwaySize, gen);
         sort(currentSamples[sampleId].begin(), currentSamples[sampleId].end());
+    }
 
-        double currentES = calcES(ranks, currentSamples[sampleId]);
+    if (!resampleGenesets(gen)) {
+        if (logStatus) {
+            Rcpp::Rcout << "Could not advance in the start" << endl;
+        }
+        incorrectRuler = true;
+        return;
     }
 
     chunksNumber = max(1, (int) sqrt(pathwaySize));
@@ -87,8 +180,17 @@ void EsRuler::extend(double ES, int seed, double eps) {
     vector<int> tmp(sampleSize);
     vector<SampleChunks> samplesChunks(sampleSize, SampleChunks(chunksNumber));
 
-    duplicateSamples();
-    while (enrichmentScores.back() <= ES - 1e-10){
+    int evMovesCnt = movesScale * pathwaySize;
+    poisson_distribution<> distr(evMovesCnt);
+
+    //  maybe here -1 is needed
+    score_t NEED_ES{score_t::getMaxNS(), int64_t(roundl(score_t::getMaxNS() * ES)) - 1, n - k, 0};
+    
+    for (int levelNum = 1; levels.back().bound.first < NEED_ES; ++levelNum) {
+        if (logStatus) {
+            Rcpp::Rcout << std::setprecision(15) << std::fixed << "Iteration " << levelNum << ": " << levels.back().bound.first.getDouble() << ' ' << levels.back().bound.second << ' ' << ES << endl;
+        }
+
         for (int i = 0, pos = 0; i < chunksNumber - 1; ++i) {
             pos += (pathwaySize + i) / chunksNumber;
             for (int j = 0; j < sampleSize; ++j) {
@@ -99,7 +201,7 @@ void EsRuler::extend(double ES, int seed, double eps) {
         }
 
         for (int i = 0; i < sampleSize; ++i) {
-            fill(samplesChunks[i].chunkSum.begin(), samplesChunks[i].chunkSum.end(), 0.0);
+            fill(samplesChunks[i].chunkSum.begin(), samplesChunks[i].chunkSum.end(), int64_t(0));
             for (int j = 0; j < chunksNumber; ++j) {
                 samplesChunks[i].chunks[j].clear();
             }
@@ -108,17 +210,45 @@ void EsRuler::extend(double ES, int seed, double eps) {
                 while (chunkLastElement[cnt] <= pos) {
                     ++cnt;
                 }
+                my_assert(cnt < chunksNumber, "chunks constructed incorrectly");
                 samplesChunks[i].chunks[cnt].push_back(pos);
                 samplesChunks[i].chunkSum[cnt] += ranks[pos];
             }
         }
 
-        for (int moves = 0; moves < sampleSize * pathwaySize;) {
-            for (int sampleId = 0; sampleId < sampleSize; sampleId++) {
-                moves += perturbate(ranks, pathwaySize, samplesChunks[sampleId], enrichmentScores.back(), gen);
+        auto run_full = [&] {
+            int iterations = 0;
+            int needMoves = movesScale * sampleSize * pathwaySize / 2; 
+            int moves = 0;
+            int iters = 0;
+            for (; moves < needMoves; iterations++) {
+                for (int sampleId = 0; sampleId < sampleSize; sampleId++) {
+                    auto nSuccess = perturbate(ranks, k, samplesChunks[sampleId], levels.back().bound, gen);
+                    moves += nSuccess.moves;
+                    iters += nSuccess.iters;
+                }
             }
-        }
-
+            for (int i = 0; i < iterations; i++) {
+                for (int sampleId = 0; sampleId < sampleSize; sampleId++) {
+                    auto nSuccess = perturbate(ranks, k, samplesChunks[sampleId], levels.back().bound, gen);
+                    moves += nSuccess.moves;
+                    iters += nSuccess.iters;
+                }
+            }
+            if (logStatus) {
+                Rcpp::Rcout << "Acceptance rate: " << 1.0 * moves / iters << std::endl;
+            }
+        };
+        auto run_partial = [&] {
+            for (int sampleId = 0; sampleId < oldSamplesStart; sampleId++) {
+                int movesCnt = distr(gen);
+                auto iters = perturbate_success(ranks, k, samplesChunks[sampleId], levels.back().bound, gen, movesCnt / 2).iters;
+                perturbate_iters(ranks, k, samplesChunks[sampleId], levels.back().bound, gen, iters);
+            }
+        };
+        run_full();
+        // run_partial();
+        
         for (int i = 0; i < sampleSize; ++i) {
             currentSamples[i].clear();
             for (int j = 0; j < chunksNumber; ++j) {
@@ -126,46 +256,80 @@ void EsRuler::extend(double ES, int seed, double eps) {
                     currentSamples[i].push_back(pos);
                 }
             }
+            my_assert(std::is_sorted(currentSamples[i].begin(), currentSamples[i].end()), "chunks constructed incorrectly");
+            if (logStatus) {
+                auto gsea_score = calcPositiveES(ranks, currentSamples[i]);
+                auto hash_value = calcHash(currentSamples[i]);
+                gsea_t score{gsea_score, hash_value};
+                if (score <= levels.back().bound) {
+                    Rcpp::Rcout << std::setprecision(15) << std::fixed << score.first.getDouble() << " " << score.second << std::endl;
+                }
+                my_assert(score > levels.back().bound, "Perturbed sets have scores < bound");
+            }
+        }
+            
+        auto lastSize = levels.size();
+        if (!resampleGenesets(gen)) {
+            incorrectRuler = true;
+            if (logStatus) {
+                Rcpp::Rcout << "Could not advance after level " << levelNum << endl;
+            }
+        }
+        if (lastSize == levels.size()) {
+            break;
         }
 
-        duplicateSamples();
-        if (eps != 0){
+        /*if (eps != 0){
             unsigned long k = enrichmentScores.size() / ((sampleSize + 1) / 2);
             if (k > - log2(0.5 * eps)) {
                 break;
             }
-        }
+        }*/
+    }
+    if (logStatus) {
+        Rcpp::Rcout << "Done: " << levels.back().bound.first.getDouble() << " " << NEED_ES.getDouble() << endl;
     }
 }
 
-
-pair<double, bool> EsRuler::getPvalue(double ES, double eps, bool sign) {
-    unsigned long halfSize = (sampleSize + 1) / 2;
-
-    auto it = enrichmentScores.begin();
-    if (ES >= enrichmentScores.back()){
-        it = enrichmentScores.end() - 1;
-    }
-    else{
-        it = lower_bound(enrichmentScores.begin(), enrichmentScores.end(), ES);
+tuple <double, bool, double> EsRuler::getPvalue(double ES_double, double eps, bool sign){
+    if (incorrectRuler){
+        return make_tuple(std::nan("1"), true, std::nan("1"));
     }
 
-    unsigned long indx = 0;
-    (it - enrichmentScores.begin()) > 0 ? (indx = (it - enrichmentScores.begin())) : indx = 0;
-
-    unsigned long k = (indx) / halfSize;
-    unsigned long remainder = sampleSize -  (indx % halfSize);
-
-    double adjLog = betaMeanLog(halfSize, sampleSize);
-    double adjLogPval = k * adjLog + betaMeanLog(remainder + 1, sampleSize);
-
-    if (sign) {
-        return make_pair(max(0.0, min(1.0, exp(adjLogPval))), true);
-    } else {
-        pair<double, bool> correction = calcLogCorrection(probCorrector, indx, sampleSize);
-        double resLog = adjLogPval + correction.first;
-        return make_pair(max(0.0, min(1.0, exp(resLog))), correction.second);
+    int const n = (int) ranks.size();
+    int const k = pathwaySize;
+    score_t ES_score{score_t::getMaxNS(), int64_t(roundl(score_t::getMaxNS() * ES_double)), n - k, 0};
+    gsea_t ES{ES_score, 0};
+    int lastLevel = 0;
+    while (lastLevel < int(levels.size()) - 1 && levels[lastLevel].bound < ES) {
+        ++lastLevel;
     }
+    //  [0..lastLevel) => P(highScore)
+    //  lastLevel => P(x >= ES)
+
+    double adjLogPval = 0;
+    double lvlsVar = 0;
+
+    for (int i = 0; i < lastLevel; ++i) {
+        auto& lvl = levels[i];
+        int nhigh = int(lvl.highScores.size());
+        nhigh += 1;
+        adjLogPval += betaMeanLog(nhigh, sampleSize);
+        lvlsVar += getVarPerLevel(nhigh, sampleSize);
+    }
+    int cntLast = 0;
+    auto& lastLvl = levels[lastLevel];
+    for (auto x : lastLvl.lowScores) {
+        cntLast += (x > ES);
+    }
+    for (auto x : lastLvl.highScores) {
+        cntLast += (x > ES);
+    }
+    adjLogPval += betaMeanLog(cntLast, sampleSize);
+    lvlsVar += getVarPerLevel(cntLast, sampleSize);
+    
+    double log2err = sqrt(lvlsVar) / log(2);
+    return make_tuple(max(0.0, min(1.0, exp(adjLogPval))), true, log2err);
 }
 
 int EsRuler::chunkLen(int ind) {
@@ -175,29 +339,48 @@ int EsRuler::chunkLen(int ind) {
     return chunkLastElement[ind] - chunkLastElement[ind - 1];
 }
 
-int EsRuler::perturbate(const vector<double> &ranks, int k, EsRuler::SampleChunks &sampleChunks,
-               double bound, mt19937 &rng) {
+EsRuler::PerturbateResult EsRuler::perturbate(vector<int64_t> const& ranks, int k, EsRuler::SampleChunks& sampleChunks, gsea_t bound, mt19937 &rng) {
     double pertPrmtr = 0.1;
-    int n = (int) ranks.size();
+    int iters = max(1, (int) (k * pertPrmtr));
+    return perturbate_iters(ranks, k, sampleChunks, bound, rng, iters);
+}
+
+EsRuler::PerturbateResult EsRuler::perturbate_iters(vector<int64_t> const& ranks, int k, EsRuler::SampleChunks& sampleChunks, gsea_t bound, mt19937 &rng, int need_iters) {
+    return perturbate_until(ranks, k, sampleChunks, bound, rng, [need_iters](int moves, int iters) {
+        return iters >= need_iters;
+    });
+}
+
+EsRuler::PerturbateResult EsRuler::perturbate_success(vector<int64_t> const& ranks, int k, EsRuler::SampleChunks& sampleChunks, gsea_t bound, mt19937 &rng, int need_successes) {
+    return perturbate_until(ranks, k, sampleChunks, bound, rng, [need_successes](int moves, int iters) {
+        return moves >= need_successes;
+    });
+}
+
+EsRuler::PerturbateResult EsRuler::perturbate_until(vector<int64_t> const& ranks, int k, EsRuler::SampleChunks& sampleChunks, gsea_t bound, mt19937 &rng, std::function<bool(int, int)> const& f) {
+    int n = int(ranks.size());
     uid_wrapper uid_n(0, n - 1, rng);
     uid_wrapper uid_k(0, k - 1, rng);
-    double NS = 0;
+
+    int64_t NS = 0;
+    hash_t curHash = 0;
     for (int i = 0; i < (int) sampleChunks.chunks.size(); ++i) {
         for (int pos : sampleChunks.chunks[i]) {
             NS += ranks[pos];
+            curHash ^= geneHashes[pos];
         }
     }
-    double q1 = 1.0 / (n - k);
-    int iters = max(1, (int) (k * pertPrmtr));
-    int moves = 0;
-
     int candVal = -1;
     bool hasCand = false;
     int candX = 0;
-    double candY = 0;
+    int64_t candY = 0;
 
-    for (int i = 0; i < iters; i++) {
+    int moves = 0;
+    int iters = 0;
+    while (!f(moves, iters)) {
+        iters += 1;
         int oldInd = uid_k();
+
         int oldChunkInd = 0, oldIndInChunk = 0;
         int oldVal;
         {
@@ -228,16 +411,22 @@ int EsRuler::perturbate(const vector<double> &ranks, int k, EsRuler::SampleChunk
             newVal);
 
         NS = NS - ranks[oldVal] + ranks[newVal];
-
+        curHash ^= geneHashes[oldVal] ^ geneHashes[newVal];
         sampleChunks.chunkSum[oldChunkInd] -= ranks[oldVal];
-
         sampleChunks.chunkSum[newChunkInd] += ranks[newVal];
+
+        bool strictly = (curHash <= bound.second);
+
+        auto check = [&](score_t const& score) {
+            return strictly ? score > bound.first : score >= bound.first;
+        };
 
         if (hasCand) {
             if (oldVal == candVal) {
                 hasCand = false;
             }
         }
+
         if (hasCand) {
             if (oldVal < candVal) {
                 candX++;
@@ -249,21 +438,19 @@ int EsRuler::perturbate(const vector<double> &ranks, int k, EsRuler::SampleChunk
             }
         }
 
-        double q2 = 1.0 / NS;
-
-        if (hasCand && -q1 * candX + q2 * candY > bound) {
+        if (hasCand && check(score_t{NS, candY, n - k, candX})) {
             ++moves;
             continue;
         }
 
         int curX = 0;
-        double curY = 0;
+        int64_t curY = 0;
         bool ok = false;
         int last = -1;
 
         bool fl = false;
         for (int i = 0; i < (int) sampleChunks.chunks.size(); ++i) {
-            if (q2 * (curY + sampleChunks.chunkSum[i]) - q1 * curX < bound) {
+            if (!check(score_t{NS, curY + sampleChunks.chunkSum[i], n - k, curX})) {
                 curY += sampleChunks.chunkSum[i];
                 curX += chunkLastElement[i] - last - 1 - (int) sampleChunks.chunks[i].size();
                 last = chunkLastElement[i] - 1;
@@ -271,7 +458,7 @@ int EsRuler::perturbate(const vector<double> &ranks, int k, EsRuler::SampleChunk
                 for (int pos : sampleChunks.chunks[i]) {
                     curY += ranks[pos];
                     curX += pos - last - 1;
-                    if (q2 * curY - q1 * curX > bound) {
+                    if (check(score_t{NS, curY, n - k, curX})) {
                         ok = true;
                         hasCand = true;
                         candX = curX;
@@ -290,10 +477,10 @@ int EsRuler::perturbate(const vector<double> &ranks, int k, EsRuler::SampleChunk
         }
 
         if (!ok) {
-        	NS = NS - ranks[newVal] + ranks[oldVal];
+            NS = NS - ranks[newVal] + ranks[oldVal];
+            curHash ^= geneHashes[newVal] ^ geneHashes[oldVal];
 
             sampleChunks.chunkSum[oldChunkInd] += ranks[oldVal];
-
             sampleChunks.chunkSum[newChunkInd] -= ranks[newVal];
 
             sampleChunks.chunks[newChunkInd].erase(
@@ -319,5 +506,5 @@ int EsRuler::perturbate(const vector<double> &ranks, int k, EsRuler::SampleChunk
             ++moves;
         }
     }
-    return moves;
+    return {moves, iters};
 }

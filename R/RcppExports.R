@@ -21,7 +21,7 @@ calcGseaStatBatchCpp <- function(stats, selectedGenes, geneRanks) {
     .Call('_fgsea_calcGseaStatBatchCpp', PACKAGE = 'fgsea', stats, selectedGenes, geneRanks)
 }
 
-fgseaMultilevelCpp <- function(enrichmentScores, ranks, pathwaySize, sampleSize, seed, eps, sign) {
-    .Call('_fgsea_fgseaMultilevelCpp', PACKAGE = 'fgsea', enrichmentScores, ranks, pathwaySize, sampleSize, seed, eps, sign)
+fgseaMultilevelCpp <- function(enrichmentScores, ranks, pathwaySize, sampleSize, seed, eps, sign, moveScale = 1.0, logStatus = FALSE) {
+    .Call('_fgsea_fgseaMultilevelCpp', PACKAGE = 'fgsea', enrichmentScores, ranks, pathwaySize, sampleSize, seed, eps, sign, moveScale, logStatus)
 }
 

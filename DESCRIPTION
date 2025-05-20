@@ -10,7 +10,6 @@ Description: The package implements an algorithm for fast gene set enrichment
     more fine grained p-values, which allows to use accurate stantard approaches to
     multiple hypothesis correction.
 biocViews: GeneExpression, DifferentialExpression, GeneSetEnrichment, Pathways
-SystemRequirements: C++11
 Depends:
     R (>= 3.3)
 Imports:
@@ -37,7 +36,7 @@ Suggests:
 License: MIT + file LICENCE
 LazyData: true
 LinkingTo: Rcpp, BH
-RoxygenNote: 7.1.1
+RoxygenNote: 7.3.2
 Encoding: UTF-8
 VignetteBuilder: knitr
 URL: https://github.com/ctlab/fgsea/

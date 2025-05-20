@@ -1,23 +1,20 @@
 #include "esCalculation.h"
 #include <algorithm>
 
-
-double calcES(const vector<double> &ranks, const vector<int> &p, double NS) {
+score_t calcES(const vector<int64_t> &ranks, const vector<int> &p, int64_t NS) {
     // p must be sorted
     int n = (int) ranks.size();
     int k = (int) p.size();
-    double res = 0.0;
-    double cur = 0.0;
-    double q1 = 1.0 / (n - k);
-    double q2 = 1.0 / NS;
+    score_t res{NS, 0, n - k, 0};
+    score_t cur{NS, 0, n - k, 0};
     int last = -1;
     for (int pos : p) {
-        cur -= q1 * (pos - last - 1);
-        if (abs(cur) > abs(res)) {
+        cur.coef_const += pos - last - 1;
+        if (res.abs() < cur.abs()) {
             res = cur;
         }
-        cur += q2 * ranks[pos];
-        if (abs(cur) > abs(res)) {
+        cur.coef_NS += ranks[pos];
+        if (res.abs() < cur.abs()) {
             res = cur;
         }
         last = pos;
@@ -25,35 +22,34 @@ double calcES(const vector<double> &ranks, const vector<int> &p, double NS) {
     return res;
 }
 
-double calcES(const vector<double> &ranks, const vector<int> &p) {
+score_t calcES(const vector<int64_t> &ranks, const vector<int> &p) {
     // p must be sorted
-    double NS = 0.0;
+    int64_t NS = 0;
     for (int pos : p) {
         NS += ranks[pos];
     }
     return calcES(ranks, p, NS);
 }
 
-double calcPositiveES(const vector<double> &ranks, const vector<int> &p, double NS) {
+score_t calcPositiveES(const vector<int64_t> &ranks, const vector<int> &p, int64_t NS) {
     // p must be sorted
     int n = (int) ranks.size();
     int k = (int) p.size();
-    double res = 0.0;
-    double cur = 0.0;
-    double q1 = 1.0 / (n - k);
-    double q2 = 1.0 / NS;
+    score_t res{NS, 0, n - k, 0};
+    score_t cur{NS, 0, n - k, 0};
     int last = -1;
     for (int pos : p) {
-        cur += q2 * ranks[pos] - q1 * (pos - last - 1);
+        cur.coef_NS += ranks[pos];
+        cur.coef_const += pos - last - 1;
         res = max(res, cur);
         last = pos;
     }
     return res;
 }
 
-double calcPositiveES(const vector<double> &ranks, const vector<int> &p) {
+score_t calcPositiveES(const vector<int64_t> &ranks, const vector<int> &p) {
     // p must be sorted
-    double NS = 0.0;
+    int64_t NS = 0;
     for (int pos : p) {
         NS += ranks[pos];
     }

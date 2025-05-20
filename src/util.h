@@ -1,7 +1,8 @@
 #pragma once
-
 #include <vector>
 #include <random>
+#include <boost/math/special_functions/digamma.hpp>
+#include <boost/math/special_functions/trigamma.hpp>
 
 // generate k numbers from [a, b] - closed interval
 // a should be non-negative, usually 0 or 1
@@ -20,3 +21,5 @@ struct uid_wrapper {
 
 	int operator()();
 };
+
+double betaMeanLog(unsigned long a, unsigned long b);
