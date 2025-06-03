@@ -1,4 +1,4 @@
-CHANGES IN VERSION 1.33.3
+CHANGES IN VERSION 1.35.1
 * more reproducibility between platforms (fix #170), but the exact results differ from previous versions.
 
 
