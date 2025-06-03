@@ -12,7 +12,7 @@ plotGesecaTable(
   scale = FALSE,
   colwidths = c(5, 3, 0.8, 1.2, 1.2),
   titles = colnames(E),
-  colors = c("blue", "white", "red"),
+  colors = rdbuColors,
   pathwayLabelStyle = NULL,
   headerLabelStyle = NULL,
   valueStyle = NULL,
@@ -39,7 +39,7 @@ it defines proportions, not actual sizes. If column width is set to zero, the co
 
 \item{titles}{sample titles to use an axis labels. Default to `colnames(E)`}
 
-\item{colors}{vector of three colors to use in the color scheme}
+\item{colors}{vector of colors to use in the color scheme (default is similar to "RdBu" Brewer's color palette)}
 
 \item{pathwayLabelStyle}{list with style parameter adjustments for pathway labels.
 For example, `list(size=10, color="red")` set the font size to 10 and color to red.

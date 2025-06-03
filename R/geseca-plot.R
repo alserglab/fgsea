@@ -1,3 +1,7 @@
+rdbuColors <-  c("#053061", "#2166AC", "#4393C3", "#92C5DE", "#D1E5F0",
+                 "#FDDBC7", "#F4A582", "#D6604D", "#B2182B", "#67001F")
+
+
 #' Plots expression profile of a gene set
 #' @param pathway Gene set to plot.
 #' @param E matrix with gene expression values
@@ -82,7 +86,7 @@ plotCoregulationProfile <- function(pathway, E,
 #'      grid.arrange. Can be both units and simple numeric vector, in latter case
 #'      it defines proportions, not actual sizes. If column width is set to zero, the column is not drawn.
 #' @param titles sample titles to use an axis labels. Default to `colnames(E)`
-#' @param colors vector of three colors to use in the color scheme
+#' @param colors vector of colors to use in the color scheme (default is similar to "RdBu" Brewer's color palette)
 #' @param pathwayLabelStyle list with style parameter adjustments for pathway labels.
 #'      For example, `list(size=10, color="red")` set the font size to 10 and color to red.
 #'      See `cowplot::draw_text` for possible options.
@@ -103,7 +107,7 @@ plotGesecaTable <- function(gesecaRes,
                             scale=FALSE,
                             colwidths=c(5, 3, 0.8, 1.2, 1.2),
                             titles=colnames(E),
-                            colors=c("blue", "white", "red"),
+                            colors=rdbuColors,
                             pathwayLabelStyle=NULL,
                             headerLabelStyle=NULL,
                             valueStyle=NULL,
@@ -251,10 +255,16 @@ plotGesecaTable <- function(gesecaRes,
 #' @param title plot title
 #' @param assay assay to use for obtaining scaled data, preferably with
 #' the same universe of genes in the scaled data
-#' @param colors vector of three colors to use in the color scheme
+#' @param colors vector of colors to use in the color scheme (default is similar to "RdBu" Brewer's color palette)
 #' @param guide option for `ggplot2::scale_color_gradientn` to control for presence of the color legend
 #' the same universe of genes in the scaled data
 #' @param image.alpha adjust the opacity of the background images
+#' @param minLimit Numeric value specifying the minimum limit for the color scale.
+#'   This defines the lower bound of the z-score used in coloring the feature plot.
+#'   Values below this limit are squished to the minimum color.
+#' @param maxLimit Numeric value specifying the maximum limit for the color scale.
+#'   This defines the upper bound of the z-score used in coloring the feature plot.
+#'   Values above this limit are squished to the maximum color.
 #' @param ... optional arguments for \link[Seurat]{SpatialFeaturePlot}
 #' @return ggplot object (or a list of objects) with the coregulation profile plot
 #'
@@ -267,9 +277,11 @@ plotCoregulationProfileSpatial <- function(pathway,
                                            object,
                                            title=NULL,
                                            assay=DefaultAssay(object),
-                                           colors=c("darkblue", "lightgrey", "darkred"),
+                                           colors=rdbuColors,
                                            guide="colourbar",
                                            image.alpha = 0,
+                                           minLimit = -3,
+                                           maxLimit = 3,
                                            ...) {
     stopifnot(requireNamespace("Seurat"))
     # TODO duplicated code with plotCoregulationProfileReduction
@@ -290,6 +302,8 @@ plotCoregulationProfileSpatial <- function(pathway,
                                            assay = assay,
                                            colors = colors,
                                            image.alpha = image.alpha,
+                                           minLimit=minLimit,
+                                           maxLimit=maxLimit,
                                            ...))
         names(ps) <- names(pathway)
         ps <- unlist(ps, recursive = FALSE)
@@ -303,8 +317,8 @@ plotCoregulationProfileSpatial <- function(pathway,
                                      combine = FALSE, image.alpha = image.alpha, ...)
     # suppress message of replacing existing color palette
     suppressMessages(ps <- lapply(ps, function(p){
-        res <- p + scale_fill_gradientn(limits = c(-3, 3),
-                                        breaks = c(-3, 0, 3),
+        res <- p + scale_fill_gradientn(limits = c(minLimit, maxLimit),
+                                        breaks = c(minLimit, 0, maxLimit),
                                         oob = scales::squish,
                                         colors = colors,
                                         guide = guide,
@@ -347,9 +361,15 @@ addGesecaScores <- function(pathways,
 #' @param title plot title
 #' @param assay assay to use for obtaining scaled data, preferably with
 #' @param reduction reduction to use for plotting (one of the `Seurat::Reductions(object)`)
-#' @param colors vector of three colors to use in the color scheme
+#' @param colors vector of colors to use in the color scheme (default is similar to "RdBu" Brewer's color palette)
 #' @param guide option for `ggplot2::scale_color_gradientn` to control for presence of the color legend
 #' the same universe of genes in the scaled data
+#' @param minLimit Numeric value specifying the minimum limit for the color scale.
+#'   This defines the lower bound of the z-score used in coloring the feature plot.
+#'   Values below this limit are squished to the minimum color.
+#' @param maxLimit Numeric value specifying the maximum limit for the color scale.
+#'   This defines the upper bound of the z-score used in coloring the feature plot.
+#'   Values above this limit are squished to the maximum color.
 #' @param ... additional arguments for Seurat::FeaturePlot
 #' @return ggplot object (or a list of objects) with the coregulation profile plot
 #'
@@ -361,8 +381,10 @@ addGesecaScores <- function(pathways,
 plotCoregulationProfileReduction <- function(pathway, object, title=NULL,
                                              assay=DefaultAssay(object),
                                              reduction=NULL,
-                                             colors=c("darkblue", "lightgrey", "darkred"),
+                                             colors=rdbuColors,
                                              guide="colourbar",
+                                             minLimit = -3,
+                                             maxLimit = 3,
                                              ...) {
     stopifnot(requireNamespace("Seurat"))
 
@@ -383,6 +405,8 @@ plotCoregulationProfileReduction <- function(pathway, object, title=NULL,
                                            reduction=reduction,
                                            colors=colors,
                                            guide=guide,
+                                           minLimit=minLimit,
+                                           maxLimit=maxLimit,
                                            ...))
         names(ps) <- names(pathway)
         return(ps)
@@ -398,7 +422,7 @@ plotCoregulationProfileReduction <- function(pathway, object, title=NULL,
 
     # suppress message of replacing existing color palette
     suppressMessages(p2 <- p +
-        scale_color_gradientn(limits=c(-3, 3), breaks=c(-3, 0, 3),
+        scale_color_gradientn(limits=c(minLimit, maxLimit), breaks=c(minLimit, 0, maxLimit),
                              colors=colors,
                              oob=scales::squish,
                              guide=guide,
