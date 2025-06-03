@@ -315,10 +315,16 @@ plotCoregulationProfileSpatial <- function(pathway,
                                     assay = assay, scale = TRUE)
     ps <- Seurat::SpatialFeaturePlot(obj2, features = "pathway",
                                      combine = FALSE, image.alpha = image.alpha, ...)
+
+    brks <- c(minLimit, maxLimit)
+    if (minLimit <= 0 && maxLimit >= 0) {
+        brks <- c(minLimit, 0, maxLimit)
+    }
+
     # suppress message of replacing existing color palette
     suppressMessages(ps <- lapply(ps, function(p){
         res <- p + scale_fill_gradientn(limits = c(minLimit, maxLimit),
-                                        breaks = c(minLimit, 0, maxLimit),
+                                        breaks = brks,
                                         oob = scales::squish,
                                         colors = colors,
                                         guide = guide,
@@ -420,9 +426,14 @@ plotCoregulationProfileReduction <- function(pathway, object, title=NULL,
     p <- p + coord_fixed()
     p$scales$scales[p$scales$find("color")] <- NULL
 
+    brks <- c(minLimit, maxLimit)
+    if (minLimit <= 0 && maxLimit >= 0) {
+        brks <- c(minLimit, 0, maxLimit)
+    }
+
     # suppress message of replacing existing color palette
     suppressMessages(p2 <- p +
-        scale_color_gradientn(limits=c(minLimit, maxLimit), breaks=c(minLimit, 0, maxLimit),
+        scale_color_gradientn(limits=c(minLimit, maxLimit), breaks=brks,
                              colors=colors,
                              oob=scales::squish,
                              guide=guide,
