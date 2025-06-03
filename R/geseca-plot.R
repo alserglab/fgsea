@@ -324,9 +324,7 @@ addGesecaScores <- function(pathways,
                             assay=DefaultAssay(object),
                             prefix="",
                             scale=FALSE) {
-    x <- GetAssay(object, assay)
-    E <- x@scale.data
-
+    E <- GetAssayData(object, assay=assay, layer="scale.data")
     res <- object
 
 
