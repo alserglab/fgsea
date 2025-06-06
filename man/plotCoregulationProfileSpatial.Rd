@@ -9,9 +9,11 @@ plotCoregulationProfileSpatial(
   object,
   title = NULL,
   assay = DefaultAssay(object),
-  colors = c("darkblue", "lightgrey", "darkred"),
+  colors = rdbuColors,
   guide = "colourbar",
   image.alpha = 0,
+  minLimit = -3,
+  maxLimit = 3,
   ...
 )
 }
@@ -25,12 +27,20 @@ plotCoregulationProfileSpatial(
 \item{assay}{assay to use for obtaining scaled data, preferably with
 the same universe of genes in the scaled data}
 
-\item{colors}{vector of three colors to use in the color scheme}
+\item{colors}{vector of colors to use in the color scheme (default is similar to "RdBu" Brewer's color palette)}
 
 \item{guide}{option for `ggplot2::scale_color_gradientn` to control for presence of the color legend
 the same universe of genes in the scaled data}
 
 \item{image.alpha}{adjust the opacity of the background images}
+
+\item{minLimit}{Numeric value specifying the minimum limit for the color scale.
+This defines the lower bound of the z-score used in coloring the feature plot.
+Values below this limit are squished to the minimum color.}
+
+\item{maxLimit}{Numeric value specifying the maximum limit for the color scale.
+This defines the upper bound of the z-score used in coloring the feature plot.
+Values above this limit are squished to the maximum color.}
 
 \item{...}{optional arguments for \link[Seurat]{SpatialFeaturePlot}}
 }
