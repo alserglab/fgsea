@@ -194,7 +194,7 @@ ggplot(data=merge(gesecaRes[, list(pathway, logPvalFull=-log10(pval))],
 
 ## Analysis of single-cell RNA-seq
 
-Les us load neccesary libraries. We a going to use `Seurat` package for working with singe cell data.
+Let us load necessary libraries. We a going to use `Seurat` package for working with singe cell data.
 
 ```{r}
 suppressMessages(library(Seurat))
