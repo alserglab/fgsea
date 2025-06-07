@@ -445,3 +445,101 @@ plotCoregulationProfileReduction <- function(pathway, object, title=NULL,
     }
     p2
 }
+
+
+
+
+
+
+#' Spatial visualization of GESECA scores for individual cells
+#'
+#' This function computes GESECA scores for one or more gene sets and overlays those scaled scores onto the spatial image.
+#'
+#' @param pathway Gene set (vector of gene names) or a named list of gene sets to plot.
+#' If a list is provided, each element is treated as a separate pathway and yields its own plot.
+#' @param object Seurat object
+#' @param title Optional title for the plot. If `pathway` is a list,
+#' `title` should be a character vector of the same length; otherwise, the list element names are used.
+#' @param assay assay to use for obtaining scaled data, preferably with
+#' the same universe of genes in the scaled data
+#' @param colors vector of colors to use in the color scheme (default is similar to "RdBu" Brewer's color palette)
+#' @param guide option for `ggplot2::scale_color_gradientn` to control for presence of the color legend
+#' the same universe of genes in the scaled data
+#' @param minLimit Numeric value specifying the minimum limit for the color scale.
+#'   This defines the lower bound of the z-score used in coloring the feature plot.
+#'   Values below this limit are squished to the minimum color.
+#' @param maxLimit Numeric value specifying the maximum limit for the color scale.
+#'   This defines the upper bound of the z-score used in coloring the feature plot.
+#'   Values above this limit are squished to the maximum color.
+#' @param ... Additional arguments passed to \link[Seurat]{ImageFeaturePlot}
+#' @return ggplot object (or a list of objects) with the spatial image plot of scaled geseca scores
+#'
+#' When the input is a list of pathways, pathway names are used for titles.
+#' A list of ggplot objects a returned in that case.
+#
+#' @import ggplot2
+#' @export
+plotCoregulationProfileImage <- function(pathway,
+                                         object,
+                                         title=NULL,
+                                         assay=DefaultAssay(object),
+                                         colors=rdbuColors,
+                                         guide="colourbar",
+                                         minLimit = -3,
+                                         maxLimit = 3,
+                                         ...) {
+    stopifnot(requireNamespace("Seurat"))
+
+    if (is.list(pathway)) {
+        if (is.null(title)) {
+            titles <- names(pathway)
+        }
+        else {
+            if (length(title) != length(pathway)) {
+                stop("Length of the specified titles does not match count of pathways")
+            }
+            titles <- title
+        }
+        ps <- lapply(seq_along(pathway), function(i)
+            plotCoregulationProfileImage(pathway[[i]],
+                                         object = object,
+                                         title = titles[i],
+                                         assay = assay,
+                                         colors = colors,
+                                         minLimit = minLimit,
+                                         maxLimit = maxLimit,
+                                         ...))
+        names(ps) <- names(pathway)
+        ps <- unlist(ps, recursive = FALSE)
+        return(ps)
+    }
+
+
+    obj2 <- fgsea:::addGesecaScores(list(pathway = pathway), object,
+                                    assay = assay, scale = TRUE)
+    ps <- Seurat::ImageFeaturePlot(obj2, features = "pathway",
+                                   combine = FALSE, ...)
+
+    brks <- c(minLimit, maxLimit)
+    if (minLimit <= 0 && maxLimit >= 0) {
+        brks <- c(minLimit, 0, maxLimit)
+    }
+
+    # suppress message of replacing existing color palette
+    suppressMessages(ps <- lapply(ps, function(p){
+        res <- p + scale_fill_gradientn(limits = c(minLimit, maxLimit),
+                                        breaks = brks,
+                                        oob = scales::squish,
+                                        colors = colors,
+                                        guide = guide,
+                                        name = "z-score")
+        res <- res + theme(legend.position = theme_get()$legend.position)
+        return(res)
+    }))
+
+    if (!is.null(title)){
+        ps <- lapply(ps, function(p) p + ggtitle(title))
+    }
+    return(ps)
+}
+
