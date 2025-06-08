@@ -443,7 +443,9 @@ xobj <- RunUMAP(xobj, dims = 1:20)
 For this tutorial, we use the preprocessed Seurat object directly:
 
 ```{r}
-xobj <- readRDS(url("https://alserglab.wustl.edu/files/fgsea/xenium-prime-ffpe-human-ovarian-cancer.rds"))
+xobj <- readRDS(url("https://alserglab.wustl.edu/files/fgsea/xenium-human-ovarian-cancer.rds"))
+
+xobj <- NormalizeData(xobj)
 xobj <- ScaleData(xobj, verbose = FALSE)
 ```
 
