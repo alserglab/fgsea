@@ -423,11 +423,18 @@ xobj <- xobj[, rownames(xobj@meta.data) %in% annot$cell_id]
 xobj@meta.data$annotation <- annot[match(rownames(xobj@meta.data), annot$cell_id), ]$group
 xobj@meta.data$annotation <- factor(xobj@meta.data$annotation)
 
-# Optional: crop region for compact visualizations in vignette
-xobj <- xobj[, xobj$x < 5000 & xobj$y < 5400]
+
 
 # Filter out low-quality cells
 xobj <- subset(xobj, subset = nCount_Xenium > 50)
+
+
+# Optional: Crop the region and subsample the object
+# These steps reduce size and complexity for a more compact vignette
+# Helps keep the vignette lightweight and quick to render
+xobj <- xobj[, xobj$x < 3000 & xobj$y < 4000]
+set.seed(1)
+xobj <- xobj[, sample.int(ncol(xobj), 40000)]
 
 # Normalize and scale data
 xobj <- NormalizeData(xobj, normalization.method = "LogNormalize", scale.factor = 1000, verbose = FALSE)
@@ -439,13 +446,19 @@ xobj <- RunPCA(xobj, verbose = FALSE)
 xobj <- RunUMAP(xobj, dims = 1:20)
 ```
 
+Additionally, before saving the object for use in the vignette, we remove the following components from the Seurat object to reduce its size and keep it tidy:
+```{r eval=FALSE}
+xobj@reductions$pca <- NULL
+xobj@assays$Xenium@layers$scale.data <- NULL
+xobj@assays$Xenium@layers$data <- NULL
+```
 
-For this tutorial, we use the preprocessed Seurat object directly:
 
+For this tutorial, we directly use the Seurat object that was preprocessed using the steps described above:
 ```{r}
 xobj <- readRDS(url("https://alserglab.wustl.edu/files/fgsea/xenium-human-ovarian-cancer.rds"))
 
-xobj <- NormalizeData(xobj)
+xobj <- NormalizeData(xobj, verbose = FALSE)
 xobj <- ScaleData(xobj, verbose = FALSE)
 ```
 
@@ -453,14 +466,15 @@ xobj <- ScaleData(xobj, verbose = FALSE)
 The plot below compares the spatial localization of annotated cells (left) with their transcriptional similarity via UMAP (right):
 
 ```{r fig.width=10, fig.height=5, out.width="100%"}
-p1 <- ImageDimPlot(xobj, group.by = "annotation", 
-                   dark.background = FALSE, size = 0.2, 
+p1 <- ImageDimPlot(xobj, group.by = "annotation",
+                   dark.background = FALSE, size = 0.5, 
                    flip_xy = TRUE) + 
     theme(legend.position = "none")
 
 p1 <- suppressMessages(p1 + coord_flip() + scale_x_reverse() + theme(aspect.ratio = 1.0))
 
-p2 <- DimPlot(xobj, group.by = "annotation", raster = TRUE) + coord_fixed()
+p2 <- DimPlot(xobj, group.by = "annotation", raster = FALSE, pt.size = 0.5, stroke.size = 0.0) + 
+    coord_fixed()
 
 p1 | p2
 ```
@@ -498,7 +512,8 @@ titles <- paste(titles, pvals, sep = "\n")
 plots <- fgsea::plotCoregulationProfileReduction(
     gsets[topPathways], xobj, 
     reduction = "umap", title = titles,
-    raster = TRUE, raster.dpi = c(500, 500)
+    raster = TRUE, raster.dpi = c(500, 500),
+    pt.size = 2.5
 )
 
 plots <- lapply(plots, function(p){
@@ -516,7 +531,7 @@ imagePlots <- plotCoregulationProfileImage(
     gsets[topPathways], object = xobj, 
     dark.background = FALSE, 
     title = titles, 
-    size=0.1
+    size=0.8
 )
 
 imagePlots <- lapply(imagePlots, function(p){
