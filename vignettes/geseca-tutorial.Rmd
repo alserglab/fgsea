@@ -260,10 +260,6 @@ library(msigdbr)
 
 pathwaysDF <- msigdbr("mouse", collection="C2", subcollection = "CP:KEGG_LEGACY")
 pathways <- split(pathwaysDF$gene_symbol, pathwaysDF$gs_name)
-
-# The code above requires msigdbdf package (https://igordot.r-universe.dev/msigdbdf) to be installed to get the full list of pathways.
-# For this vignette we use presaved KEGG pathways.
-pathways <- readRDS(url("https://alserglab.wustl.edu/files/fgsea/example_kegg_pathways.rds"))
 ```
 
 Now we can run the analysis (we set `center=FALSE` because we use the 
