@@ -17,7 +17,9 @@ plotGesecaTable(
   headerLabelStyle = NULL,
   valueStyle = NULL,
   axisLabelStyle = NULL,
-  axisLabelHeightScale = NULL
+  axisLabelHeightScale = NULL,
+  minLimit = -3,
+  maxLimit = 3
 )
 }
 \arguments{
@@ -54,6 +56,14 @@ See `ggplot2::element_text` for possible options.}
 
 \item{axisLabelHeightScale}{height of the row with axis labels compared to other rows.
 When set to `NULL` the value is determined automatically.}
+
+\item{minLimit}{Numeric value specifying the minimum limit for the color scale.
+This defines the lower bound of the z-score used in coloring the feature plot.
+Values below this limit are squished to the minimum color.}
+
+\item{maxLimit}{Numeric value specifying the maximum limit for the color scale.
+This defines the upper bound of the z-score used in coloring the feature plot.
+Values above this limit are squished to the maximum color.}
 }
 \value{
 ggplot object with gene set profile plots

@@ -96,6 +96,12 @@ plotCoregulationProfile <- function(pathway, E,
 #'      See `ggplot2::element_text` for possible options.
 #' @param axisLabelHeightScale height of the row with axis labels compared to other rows.
 #'      When set to `NULL` the value is determined automatically.
+#' @param minLimit Numeric value specifying the minimum limit for the color scale.
+#'   This defines the lower bound of the z-score used in coloring the feature plot.
+#'   Values below this limit are squished to the minimum color.
+#' @param maxLimit Numeric value specifying the maximum limit for the color scale.
+#'   This defines the upper bound of the z-score used in coloring the feature plot.
+#'   Values above this limit are squished to the maximum color.
 #' @return ggplot object with gene set profile plots
 #' @import ggplot2
 #' @import cowplot
@@ -112,7 +118,9 @@ plotGesecaTable <- function(gesecaRes,
                             headerLabelStyle=NULL,
                             valueStyle=NULL,
                             axisLabelStyle=NULL,
-                            axisLabelHeightScale=NULL){
+                            axisLabelHeightScale=NULL,
+                            minLimit = -3,
+                            maxLimit = 3){
 
     pathwayLabelStyleDefault <- list(size=12, hjust=1, x=0.95, vjust=0)
     pathwayLabelStyle <- modifyList(pathwayLabelStyleDefault, as.list(pathwayLabelStyle))
@@ -161,17 +169,19 @@ plotGesecaTable <- function(gesecaRes,
     maxValue <- max(prjspd$value)
     minValue <- min(prjspd$value)
 
-    color_legend <- cowplot::get_legend(
-        ggplot(prjspd[pathway %fin% names(pathways)[[1]]],
-               aes(x=sample, y=pathway, fill=value)) +
-            geom_tile() +
-            scale_fill_gradientn(limits=c(-3, 3), breaks=c(-3, 0, 3),
-                                 oob=scales::squish,
-                                 colors=colors,
-                                 # guide = guide,
-                                 name = "z-score"
-            ) +
-            theme(legend.position = "bottom"))
+    # auxillary plot for extracting color legend
+    testPlot <-  ggplot(prjspd[pathway %fin% names(pathways)[[1]]],
+                        aes(x=sample, y=pathway, fill=value)) +
+        geom_tile() +
+        scale_fill_gradientn(limits=c(minLimit, maxLimit), breaks=c(minLimit, 0, maxLimit),
+                             oob=scales::squish,
+                             colors=colors,
+                             # guide = guide,
+                             name = "z-score"
+        )  +
+        theme(legend.position = "bottom")
+    color_legend <- get_plot_component(testPlot, "guide-box-bottom")
+
 
     ps <- lapply(names(pathways), function(pn) {
         p <- pathways[[pn]]
@@ -181,7 +191,7 @@ plotGesecaTable <- function(gesecaRes,
             ggplot(prjspd[pathway %fin% pn],
                    aes(x=sample, y=pathway, fill=value)) +
                 geom_tile(color = "black", size = min(10/ncol(E), 0.5)) +
-                scale_fill_gradientn(limits=c(-3, 3), breaks=c(-3, 0, 3),
+                scale_fill_gradientn(limits=c(minLimit, maxLimit), breaks=c(minLimit, 0, maxLimit),
                                      oob=scales::squish,
                                      colors=colors,
                                      # guide = guide,
