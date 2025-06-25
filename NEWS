@@ -1,4 +1,5 @@
 CHANGES IN VERSION 1.35.3
+* plotGesecaTable shows a legend
 * plotCoregulationProfileImage for in-situ profiling
 * change default color scheme for GESECA plots
 * fix GESECA plots for Seurat 5
