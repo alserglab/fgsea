@@ -119,7 +119,7 @@ collection from MSigDB database.
 
 ```{r}
 library(msigdbr)
-pathwaysDF <- msigdbr("mouse", collection="H")
+pathwaysDF <- msigdbr(species="mouse", collection="H")
 pathways <- split(as.character(pathwaysDF$ncbi_gene), pathwaysDF$gs_name)
 ```
 
@@ -258,7 +258,7 @@ Following the authors we are going to use KEGG pathway collection.
 ```{r}
 library(msigdbr)
 
-pathwaysDF <- msigdbr("mouse", collection="C2", subcollection = "CP:KEGG_LEGACY")
+pathwaysDF <- msigdbr(species="mouse", collection="C2", subcollection = "CP:KEGG_LEGACY")
 pathways <- split(pathwaysDF$gene_symbol, pathwaysDF$gs_name)
 ```
 
@@ -330,7 +330,7 @@ We will use HALLMARK pathways as the gene set collection.
 
 ```{r}
 library(msigdbr)
-pathwaysDF <- msigdbr("human", collection="H")
+pathwaysDF <- msigdbr(species="human", collection="H")
 pathways <- split(pathwaysDF$gene_symbol, pathwaysDF$gs_name)
 ```
 
@@ -485,7 +485,7 @@ xobj <- RunPCA(xobj, verbose = F, rev.pca = TRUE, reduction.name = "pca.rev",
 
 E <- xobj@reductions$pca.rev@feature.loadings
 
-gsets <- msigdbr("human", collection = "H")
+gsets <- msigdbr(species="human", collection="H")
 gsets <- split(gsets$gene_symbol, gsets$gs_name)
 
 set.seed(1)
