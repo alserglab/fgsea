@@ -16,7 +16,7 @@ The latest version of `fgsea` can be installed from GitHub using `devtools` pack
 
 ```{r}
 library(devtools)
-install_github("ctlab/fgsea")
+install_github("alserglab/fgsea")
 ```
 
 
