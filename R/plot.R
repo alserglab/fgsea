@@ -166,11 +166,14 @@ plotGseaTable <- function(pathways, stats, fgseaRes,
 #' @param gseaParam GSEA parameter.
 #' @return returns list with the following data:
 #' * `curve` - data.table with the coordinates of the enrichment curve;
-#' * `ticks` - data.table with statistic entries for each pathway gene,adjusted with gseaParam;
+#' * `ticks` - data.table with statistic entries for each pathway gene, adjusted with gseaParam;
 #' * `stats` - data.table with statistic values for all of the genes, adjusted with gseaParam;
 #' * `posES`, `negES`, `spreadES` - values of the positive enrichment score,
 #'  negative enrichment score, and difference between them;
 #' * `maxAbsStat` - maximal absolute value of statistic entries, adjusted with gseaParam
+#'
+#' Note: for input `stats=0` and `gseaParam=0`, the returned `ticks` and `stats` will be zero, while
+#' values of one are used in calculation of enrichment score.
 #' @export
 #' @examples
 #' library(ggplot2)
@@ -212,7 +215,8 @@ plotEnrichmentData <- function(pathway, stats,
     ord <- order(rnk)
 
     statsAdj <- stats[ord]
-    statsAdj <- sign(statsAdj) * (abs(statsAdj) ^ gseaParam)
+    statSigns <- sign(statsAdj)
+    statsAdj <- (abs(statsAdj) ^ gseaParam)
 
     pathway <- unname(as.vector(na.omit(match(pathway, names(statsAdj)))))
     pathway <- sort(pathway)
@@ -228,8 +232,8 @@ plotEnrichmentData <- function(pathway, stats,
     xs <- as.vector(rbind(pathway - 1, pathway))
     ys <- as.vector(rbind(bottoms, tops))
     toPlot <- data.table(rank=c(0, xs, n + 1), ES=c(0, ys, 0))
-    ticks <- data.table(rank=pathway, stat=statsAdj[pathway])
-    stats <- data.table(rank=seq_along(stats), stat=statsAdj)
+    ticks <- data.table(rank=pathway, stat=statSigns[pathway]*statsAdj[pathway])
+    stats <- data.table(rank=seq_along(stats), stat=statSigns*statsAdj)
 
     res <- list(
         curve=toPlot,

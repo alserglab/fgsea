@@ -1,3 +1,6 @@
+CHANGES IN VERSION 1.35.7
+* fix handling of zero stat values with gseaParam=0 in plotEnrichment
+
 CHANGES IN VERSION 1.35.3
 * plotGesecaTable shows a legend
 * plotCoregulationProfileImage for in-situ profiling
