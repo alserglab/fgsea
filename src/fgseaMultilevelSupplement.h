@@ -22,7 +22,8 @@ private:
     using gsea_t = pair<score_t, hash_t>;
     
     struct Level {
-        vector<gsea_t> lowScores, highScores;
+        //  score, is_positive
+        vector<pair<gsea_t, bool>> lowScores, highScores;
         gsea_t bound;
     };
 

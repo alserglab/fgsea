@@ -37,7 +37,6 @@ std::vector<int> combination(const int &a, const int &b, const int &k, std::mt19
                 used[r] = true;
             }
         }
-        std::shuffle(v.begin(), v.end(), rng);
     }
 
     return v;

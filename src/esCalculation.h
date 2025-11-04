@@ -6,6 +6,24 @@
 
 using namespace std;
 
+#include <boost/config.hpp>
+
+#if defined(BOOST_HAS_INT128)
+
+using int128  = __int128;
+using uint128 = unsigned __int128;
+
+#else
+
+#include <boost/multiprecision/cpp_int.hpp>
+using boost::multiprecision::int128_t;
+using boost::multiprecision::uint128_t;
+
+using int128  = int128_t;
+using uint128 = uint128_t;
+
+#endif
+
 struct score_t {
   //  score = coef_ns / NS - coef_const / diff
   int64_t NS;
@@ -21,12 +39,12 @@ struct score_t {
     return coef_NS * diff - coef_const * NS;
   }
 
-  __int128_t Compare(score_t const& other) const {
+  int128 Compare(score_t const& other) const {
     int64_t P1 = coef_NS * diff + NS * (other.coef_const - coef_const);
     int64_t Q1 = NS * diff;
     int64_t P2 = other.coef_NS;
     int64_t Q2 = other.NS;
-    return __int128_t(P1) * Q2 - __int128_t(P2) * Q1;
+    return int128(P1) * Q2 - int128(P2) * Q1;
   }
 
   bool operator<(score_t const& other) const {
