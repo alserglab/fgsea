@@ -25,3 +25,7 @@ fgseaMultilevelCpp <- function(enrichmentScores, ranks, pathwaySize, sampleSize,
     .Call('_fgsea_fgseaMultilevelCpp', PACKAGE = 'fgsea', enrichmentScores, ranks, pathwaySize, sampleSize, seed, eps, sign, moveScale, logStatus)
 }
 
+gesecaCpp <- function(E, inpScores, genesetSize, sampleSize, seed, eps) {
+    .Call('_fgsea_gesecaCpp', PACKAGE = 'fgsea', E, inpScores, genesetSize, sampleSize, seed, eps)
+}
+

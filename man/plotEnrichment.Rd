@@ -2,7 +2,7 @@
 % Please edit documentation in R/plot.R
 \name{plotEnrichment}
 \alias{plotEnrichment}
-\title{Plots GSEA enrichment plot.}
+\title{Plots GSEA enrichment plot. For more flexibility use `plotEnrichmentData` function.}
 \usage{
 plotEnrichment(pathway, stats, gseaParam = 1, ticksSize = 0.2)
 }
@@ -19,7 +19,7 @@ plotEnrichment(pathway, stats, gseaParam = 1, ticksSize = 0.2)
 ggplot object with the enrichment plot.
 }
 \description{
-Plots GSEA enrichment plot.
+Plots GSEA enrichment plot. For more flexibility use `plotEnrichmentData` function.
 }
 \examples{
 data(examplePathways)

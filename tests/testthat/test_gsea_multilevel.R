@@ -20,7 +20,7 @@ test_that("fgseaMultilevel works", {
     fgseaMultilevelRes <- fgseaMultilevel(examplePathways, exampleRanks,
                                           sampleSize=100, maxSize=100,
                                           eps=0.0, nproc=2)
-	})
+})
 
 
 test_that("fgseaMultilevel is reproducable independent of bpparam settings", {
@@ -75,13 +75,13 @@ test_that("fgseaMultilevel works with zero pathways", {
 })
 
 
-test_that("fgseaMultilevel throws a warning when there are duplicate gene names", {
+test_that("fgseaMultilevel throws an error when there are duplicate gene names", {
     data(examplePathways)
     data(exampleRanks)
     exampleRanks.dupNames <- exampleRanks
     names(exampleRanks.dupNames)[41] <- names(exampleRanks.dupNames)[42]
 
-    expect_warning(fgseaMultilevel(examplePathways, exampleRanks.dupNames, sampleSize=100, minSize=10, maxSize=50, nproc=1))
+    expect_error(fgseaMultilevel(examplePathways, exampleRanks.dupNames, sampleSize=100, minSize=10, maxSize=50, nproc=1))
 
 })
 
@@ -94,13 +94,13 @@ test_that("fgseaMultilevel: Ties detection in ranking works", {
     exampleRanks.ties.zero[41] <- exampleRanks.ties.zero[42] <- 0
 
     expect_silent(fgseaMultilevel(examplePathways, exampleRanks,
-                                  minSize=10, maxSize=50, nproc=1))
+                                  minSize=10, maxSize=50, BPPARAM=SerialParam()))
 
     expect_warning(fgseaMultilevel(examplePathways, exampleRanks.ties,
-                                   minSize=10, maxSize=50, nproc=1))
+                                   minSize=10, maxSize=50, BPPARAM=SerialParam()))
 
     expect_silent(fgseaMultilevel(examplePathways, exampleRanks.ties.zero,
-                                  minSize=10, maxSize=50, nproc=1))
+                                  minSize=10, maxSize=50, BPPARAM=SerialParam()))
 })
 
 test_that("fgseaMultilevel gives valid P-value for 5990980_Cell_Cycle", {

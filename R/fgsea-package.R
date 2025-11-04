@@ -11,6 +11,23 @@ NULL
 #' @name exampleRanks
 NULL
 
+#' Example of expression values obtained for GSE14308.
+#'
+#' Expression data was obtained by preprocessing the GSE14308 dataset.
+#' For the matrix of gene expression value, the following steps were performed:
+#' \itemize{
+#' \item expression values were log2-scaled
+#' \item quantile-type normalization was perfomred between arrays
+#' \item rows were collapsed by `ENTREZID`
+#' \item rows were sorted in descending order by mean expression value per gene
+#' \item finally, top-10_000 genes were taken
+#' }
+#' The exact script is available as
+#' system.file("gen_gse14308_expression_matrix.R", package="fgsea")
+#' @docType data
+#' @name exampleExpressionMatrix
+NULL
+
 #' Example list of mouse Reactome pathways.
 #'
 #' The list was obtained by selecting all the pathways from `reactome.db`

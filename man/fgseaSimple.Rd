@@ -9,7 +9,7 @@ fgseaSimple(
   stats,
   nperm,
   minSize = 1,
-  maxSize = Inf,
+  maxSize = length(stats) - 1,
   scoreType = c("std", "pos", "neg"),
   nproc = 0,
   gseaParam = 1,
@@ -27,7 +27,11 @@ fgseaSimple(
 
 \item{maxSize}{Maximal size of a gene set to test. All pathways above the threshold are excluded.}
 
-\item{scoreType}{This parameter defines the GSEA score type. Possible options are ("std", "pos", "neg")}
+\item{scoreType}{This parameter defines the GSEA score type.
+Possible options are ("std", "pos", "neg").
+By default ("std") the enrichment score is computed as in the original GSEA.
+The "pos" and "neg" score types are intended to be used for one-tailed tests
+(i.e. when one is interested only in positive ("pos") or negateive ("neg") enrichment).}
 
 \item{nproc}{If not equal to zero sets BPPARAM to use nproc workers (default = 0).}
 

@@ -9,7 +9,7 @@ fgseaMultilevel(
   stats,
   sampleSize = 101,
   minSize = 1,
-  maxSize = Inf,
+  maxSize = length(stats) - 1,
   eps = 1e-50,
   scoreType = c("std", "pos", "neg"),
   nproc = 0,
@@ -32,7 +32,11 @@ fgseaMultilevel(
 
 \item{eps}{This parameter sets the boundary for calculating the p value.}
 
-\item{scoreType}{This parameter defines the GSEA score type. Possible options are ("std", "pos", "neg")}
+\item{scoreType}{This parameter defines the GSEA score type.
+Possible options are ("std", "pos", "neg").
+By default ("std") the enrichment score is computed as in the original GSEA.
+The "pos" and "neg" score types are intended to be used for one-tailed tests
+(i.e. when one is interested only in positive ("pos") or negateive ("neg") enrichment).}
 
 \item{nproc}{If not equal to zero sets BPPARAM to use nproc workers (default = 0).}
 

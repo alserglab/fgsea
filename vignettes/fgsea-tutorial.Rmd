@@ -151,9 +151,33 @@ pathways <- gmtPathways(gmt.file)
 str(head(pathways))
 ```
 
-And runnig fgsea:
+And running fgsea:
 
 ```{r warning=FALSE}
 fgseaRes <- fgsea(pathways, ranks, minSize=15, maxSize=500)
 head(fgseaRes)
+```
+
+## Over-representation test
+
+`fgsea` package also contains a function called `fora` for over-representation analysis based
+enrichment tests, based on the hypergeometric test.
+
+`fora` requires a foreground set of genes of interest, a background set consisting of all
+robustly detected genes (also called universe), and some pathways.
+
+In the following example, the foreground (`fg`) consists of the 500 genes with the highest
+`stat` value.
+
+```{r}
+fg <-  names(head(exampleRanks[order(exampleRanks, decreasing=TRUE)],500))
+bg <- names(exampleRanks)
+foraRes <- fora(genes=fg, universe=bg, pathways=examplePathways)
+head(foraRes)
+```
+
+## Session info
+
+```{r}
+sessionInfo()
 ```

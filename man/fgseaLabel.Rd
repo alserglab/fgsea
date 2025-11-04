@@ -10,7 +10,7 @@ fgseaLabel(
   labels,
   nperm,
   minSize = 1,
-  maxSize = Inf,
+  maxSize = nrow(mat) - 1,
   nproc = 0,
   gseaParam = 1,
   BPPARAM = NULL

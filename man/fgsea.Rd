@@ -4,9 +4,26 @@
 \alias{fgsea}
 \title{Wrapper to run methods for preranked gene set enrichment analysis.}
 \usage{
-fgsea(...)
+fgsea(
+  pathways,
+  stats,
+  minSize = 1,
+  maxSize = length(stats) - 1,
+  gseaParam = 1,
+  ...
+)
 }
 \arguments{
+\item{pathways}{List of gene sets to check.}
+
+\item{stats}{Named vector of gene-level stats. Names should be the same as in 'pathways'}
+
+\item{minSize}{Minimal size of a gene set to test. All pathways below the threshold are excluded.}
+
+\item{maxSize}{Maximal size of a gene set to test. All pathways above the threshold are excluded.}
+
+\item{gseaParam}{GSEA parameter value, all gene-level statis are raised to the power of `gseaParam`}
+
 \item{...}{optional arguments for functions \link[fgsea]{fgseaSimple}, \link[fgsea]{fgseaMultilevel}}
 }
 \value{

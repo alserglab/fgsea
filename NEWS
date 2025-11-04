@@ -1,3 +1,37 @@
+CHANGES IN VERSION 1.35.7
+* fix handling of zero stat values with gseaParam=0 in plotEnrichment
+
+CHANGES IN VERSION 1.35.3
+* plotGesecaTable shows a legend
+* plotCoregulationProfileImage for in-situ profiling
+* change default color scheme for GESECA plots
+* fix GESECA plots for Seurat 5
+
+CHANGES IN VERSION 1.35.1
+* more reproducibility between platforms (fix #170), but the exact results differ from previous versions.
+
+CHANGES IN VERSION 1.33.3
+* update code for using `msigdbr` in geseca vignette
+
+CHANGES IN VERSION 1.31.6
+* plotCoregulationSpatial supports multiple samples
+
+CHANGES IN VERSION 1.31.3
+* check for empty strings in gene names
+* minor fix in leading edge calculation
+
+CHANGES IN VERSION 1.31.2
+* fora() provides fold enrichment scores for more effective prioritisation of results
+
+CHANGES IN VERSION 1.25.1
+* introduced plotEnrichmentData() function for more flexible plotting
+* update GESECA plot behavior
+
+CHANGES IN VERSION 1.23.1
+* Introduced GESECA method for multi-conditional gene set enrichment (see geseca-tutorial vignette for details)
+* Enrichment table plots now use cowplot (issue #101)
+* Enrichment table plots are more easily fine-tuned (issue #29)
+
 CHANGES IN VERSION 1.21.1
 * fix a reproducibility problem (https://github.com/ctlab/fgsea/issues/110)
 

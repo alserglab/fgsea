@@ -4,6 +4,11 @@
 #' \link[fgsea]{fgseaSimple}, \link[fgsea]{fgseaMultilevel}.
 #' By default, the \link[fgsea]{fgseaMultilevel} function is used for analysis.
 #' For compatibility with the previous implementation you can pass the `nperm` argument to the function.
+#' @param pathways List of gene sets to check.
+#' @param stats Named vector of gene-level stats. Names should be the same as in 'pathways'
+#' @param minSize Minimal size of a gene set to test. All pathways below the threshold are excluded.
+#' @param maxSize Maximal size of a gene set to test. All pathways above the threshold are excluded.
+#' @param gseaParam GSEA parameter value, all gene-level statis are raised to the power of `gseaParam`
 #' @param ... optional arguments for functions \link[fgsea]{fgseaSimple}, \link[fgsea]{fgseaMultilevel}
 #' @return A table with GSEA results. Each row corresponds to a tested pathway.
 #' @export
@@ -13,33 +18,27 @@
 #' fgseaRes <- fgsea(examplePathways, exampleRanks, maxSize=500)
 #' # Testing only one pathway is implemented in a more efficient manner
 #' fgseaRes1 <- fgsea(examplePathways[1], exampleRanks)
-fgsea <- function(...){
+fgsea <- function(pathways, stats, minSize = 1, maxSize = length(stats)-1, gseaParam = 1, ...){
     arguments <- list(...)
     if ("nperm" %in% names(arguments)){
         warning("You are trying to run fgseaSimple. ",
                 "It is recommended to use fgseaMultilevel. ",
                 "To run fgseaMultilevel, you need to remove ",
                 "the nperm argument in the fgsea function call.")
-        res <- fgseaSimple(...)
+        res <- fgseaSimple(pathways = pathways, stats = stats,
+                           minSize = minSize, maxSize = maxSize,
+                           gseaParam = gseaParam, ...)
     }
     else{
-        res <- fgseaMultilevel(...)
+        res <- fgseaMultilevel(pathways = pathways, stats = stats,
+                               minSize = minSize, maxSize = maxSize,
+                               gseaParam = gseaParam, ...)
     }
     res
 }
 
 
 preparePathwaysAndStats <- function(pathways, stats, minSize, maxSize, gseaParam, scoreType){
-    # Error if pathways is not a list
-    if (!is.list(pathways)) {
-        stop("pathways should be a list with each element containing names of the stats argument")
-    }
-
-    # Error if stats is not named
-    if (is.null(names(stats))) {
-        stop("stats should be named")
-    }
-
     # Error if stats are non-finite
     if (any(!is.finite(stats))){
         stop("Not all stats values are finite numbers")
@@ -54,11 +53,6 @@ preparePathwaysAndStats <- function(pathways, stats, minSize, maxSize, gseaParam
                 "The order of those tied genes will be arbitrary, which may produce unexpected results.")
     }
 
-    # Warning message for duplicate gene names
-    if (any(duplicated(names(stats)))) {
-        warning("There are duplicate gene names, fgsea may produce unexpected results.")
-    }
-
     if (all(stats > 0) & scoreType == "std"){
         warning("All values in the stats vector are greater than zero and scoreType is \"std\", ",
                 "maybe you should switch to scoreType = \"pos\".")
@@ -67,20 +61,11 @@ preparePathwaysAndStats <- function(pathways, stats, minSize, maxSize, gseaParam
     stats <- sort(stats, decreasing=TRUE)
     stats <- abs(stats) ^ gseaParam
 
+    res <- preparePathways(pathways, universe=names(stats), minSize, maxSize)
 
-    minSize <- max(minSize, 1)
+    res$stats <- stats
 
-    pathwaysFiltered <- lapply(pathways, function(p) { unique(na.omit(fmatch(p, names(stats)))) })
-    pathwaysSizes <- sapply(pathwaysFiltered, length)
-
-    toKeep <- which(minSize <= pathwaysSizes & pathwaysSizes <= maxSize)
-
-    pathwaysFiltered <- pathwaysFiltered[toKeep]
-    pathwaysSizes <- pathwaysSizes[toKeep]
-
-    list(filtered=pathwaysFiltered,
-         sizes=pathwaysSizes,
-         stats=stats)
+    res
 }
 
 
@@ -121,6 +106,7 @@ calcGseaStat <- function(stats,
     p <- gseaParam
 
     S <- sort(S)
+    stopifnot(all(head(S, -1) < tail(S, -1)))
 
     m <- length(S)
     N <- length(r)
@@ -162,13 +148,16 @@ calcGseaStat <- function(stats,
         res <- c(res, list(tops=tops, bottoms=bottoms))
     }
     if (returnLeadingEdge) {
-        leadingEdge <- if (maxP > -minP) {
-            S[seq_along(S) <= which.max(bottoms)]
-        } else if (maxP < -minP) {
-            rev(S[seq_along(S) >= which.min(bottoms)])
-        } else {
-            NULL
-        }
+        switch(scoreType,
+               std = leadingEdge <- if (maxP > -minP) {
+                   S[seq_along(S) <= which.max(tops)]
+               } else if (maxP < -minP) {
+                   rev(S[seq_along(S) >= which.min(bottoms)])
+               } else {
+                   NULL
+               },
+               pos = leadingEdge <- S[seq_along(S) <= which.max(tops)],
+               neg = leadingEdge <- rev(S[seq_along(S) >= which.min(bottoms)]))
 
         res <- c(res, list(leadingEdge=leadingEdge))
     }
@@ -186,7 +175,11 @@ calcGseaStat <- function(stats,
 #' @param nperm Number of permutations to do. Minimial possible nominal p-value is about 1/nperm
 #' @param minSize Minimal size of a gene set to test. All pathways below the threshold are excluded.
 #' @param maxSize Maximal size of a gene set to test. All pathways above the threshold are excluded.
-#' @param scoreType This parameter defines the GSEA score type. Possible options are ("std", "pos", "neg")
+#' @param scoreType This parameter defines the GSEA score type.
+#' Possible options are ("std", "pos", "neg").
+#' By default ("std") the enrichment score is computed as in the original GSEA.
+#' The "pos" and "neg" score types are intended to be used for one-tailed tests
+#' (i.e. when one is interested only in positive ("pos") or negateive ("neg") enrichment).
 #' @param nproc If not equal to zero sets BPPARAM to use nproc workers (default = 0).
 #' @param gseaParam GSEA parameter value, all gene-level statis are raised to the power of `gseaParam`
 #'                  before calculation of GSEA enrichment scores.
@@ -222,7 +215,7 @@ fgseaSimple <- function(pathways,
                         stats,
                         nperm,
                         minSize   = 1,
-                        maxSize   = Inf,
+                        maxSize   = length(stats)-1,
                         scoreType = c("std", "pos", "neg"),
                         nproc     = 0,
                         gseaParam = 1,
@@ -355,7 +348,7 @@ calcGseaStatBatch <- function(stats, selectedStats, geneRanks=seq_along(stats),
 #'
 #' @importFrom Matrix invPerm
 fgseaLabel <- function(pathways, mat, labels, nperm,
-                      minSize=1, maxSize=Inf,
+                      minSize=1, maxSize=nrow(mat)-1,
                       nproc=0,
                       gseaParam=1,
                       BPPARAM=NULL) {
@@ -550,10 +543,10 @@ collapsePathways <- function(fgseaRes,
         u1 <- setdiff(universe, pathways[[p]])
 
         fgseaResUp1 <- fgseaSimple(pathways = pathways[pathwaysUp], stats=stats[u1],
-                                   nperm=nperm, maxSize=length(u1)-1, nproc=1,
+                                   nperm=nperm, maxSize=length(u1)-1, BPPARAM = SerialParam(),
                                    gseaParam=gseaParam, scoreType = "pos")
         fgseaResDown1 <- fgseaSimple(pathways = pathways[pathwaysDown], stats=stats[u1],
-                                     nperm=nperm, maxSize=length(u1)-1, nproc=1,
+                                     nperm=nperm, maxSize=length(u1)-1, BPPARAM = SerialParam(),
                                      gseaParam=gseaParam, scoreType = "neg")
         fgseaRes1 <- rbindlist(list(fgseaResUp1, fgseaResDown1), use.names = TRUE)
 
@@ -562,10 +555,10 @@ collapsePathways <- function(fgseaRes,
         u2 <- pathways[[p]]
 
         fgseaResUp2 <- fgseaSimple(pathways = pathways[pathwaysUp], stats=stats[u2],
-                                   nperm=nperm, maxSize=length(u2)-1, nproc=1,
+                                   nperm=nperm, maxSize=length(u2)-1, BPPARAM = SerialParam(),
                                    gseaParam=gseaParam, scoreType = "pos")
         fgseaResDown2 <- fgseaSimple(pathways = pathways[pathwaysDown], stats=stats[u2],
-                                     nperm=nperm, maxSize=length(u2)-1, nproc=1,
+                                     nperm=nperm, maxSize=length(u2)-1, BPPARAM = SerialParam(),
                                      gseaParam=gseaParam, scoreType = "neg")
         fgseaRes2 <- rbindlist(list(fgseaResUp2, fgseaResDown2), use.names = TRUE)
 
@@ -711,11 +704,14 @@ fgseaSimpleImpl <- function(pathwayScores, pathwaysSizes,
 setUpBPPARAM <- function(nproc=0, BPPARAM=NULL){
     if (is.null(BPPARAM)) {
         if (nproc != 0) {
+            if (nproc == 1) {
+                result <- SerialParam(progressbar = TRUE)
+            }
             if (.Platform$OS.type == "windows") {
                 # windows doesn't support multicore, using snow instead
-                result <- SnowParam(workers = nproc)
+                result <- SnowParam(workers = nproc, progressbar = TRUE)
             } else {
-                result <- MulticoreParam(workers = nproc)
+                result <- MulticoreParam(workers = nproc, progress = TRUE)
             }
         } else {
             result <- bpparam()

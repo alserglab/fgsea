@@ -44,10 +44,11 @@ private:
     vector<vector<int>> currentSamples;
     int oldSamplesStart = 0;
     vector<Level> levels;
+    // TODO: remove commented parts
     // vector<unsigned int> probCorrector;
 
     // void duplicateSamples();
-    bool resampleGenesets(mt19937 &rng);
+    bool resampleGenesets(random_engine_t &rng);
 
     vector<int> chunkLastElement;
     int chunksNumber;
@@ -59,15 +60,15 @@ private:
     };
 
     PerturbateResult perturbate(vector<int64_t> const& ranks, int k, SampleChunks& sampleChunks,
-               gsea_t bound, mt19937 &rng);
+               gsea_t bound, random_engine_t &rng);
 
     PerturbateResult perturbate_iters(vector<int64_t> const& ranks, int k, SampleChunks& sampleChunks,
-               gsea_t bound, mt19937 &rng, int iters);
+               gsea_t bound, random_engine_t &rng, int iters);
 
     PerturbateResult perturbate_success(vector<int64_t> const& ranks, int k, SampleChunks& sampleChunks,
-               gsea_t bound, mt19937 &rng, int successes);
+               gsea_t bound, random_engine_t &rng, int successes);
 
-    PerturbateResult perturbate_until(vector<int64_t> const& ranks, int k, SampleChunks& sampleChunks, gsea_t bound, mt19937 &rng, std::function<bool(int, int)> const& f);
+    PerturbateResult perturbate_until(vector<int64_t> const& ranks, int k, SampleChunks& sampleChunks, gsea_t bound, random_engine_t &rng, std::function<bool(int, int)> const& f);
 
     int chunkLen(int ind);
 
@@ -95,6 +96,7 @@ double betaMeanLog(unsigned long a, unsigned long b);
 // double getErrorPerLevel(unsigned long k, unsigned long n);
 double getVarPerLevel(unsigned long k, unsigned long n);
 
+// TODO: do we still need it?
 pair<double, bool> calcLogCorrection(const vector<unsigned int> &probCorrector,
                                      long probCorrIndx, unsigned int sampleSize);
 

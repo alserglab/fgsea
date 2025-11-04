@@ -10,7 +10,11 @@ plotGseaTable(
   fgseaRes,
   gseaParam = 1,
   colwidths = c(5, 3, 0.8, 1.2, 1.2),
-  render = TRUE
+  pathwayLabelStyle = NULL,
+  headerLabelStyle = NULL,
+  valueStyle = NULL,
+  axisLabelStyle = NULL,
+  render = NULL
 )
 }
 \arguments{
@@ -28,11 +32,21 @@ choice too.}
 grid.arrange. Can be both units and simple numeric vector, in latter case
 it defines proportions, not actual sizes. If column width is set to zero, the column is not drawn.}
 
-\item{render}{If true, the plot is rendered to the current device.
-Otherwise, the grob is returned. Default is true.}
+\item{pathwayLabelStyle}{list with style parameter adjustments for pathway labels.
+For example, `list(size=10, color="red")` set the font size to 10 and color to red.
+See `cowplot::draw_text` for possible options.}
+
+\item{headerLabelStyle}{similar to `pathwayLabelStyle` but for the table header.}
+
+\item{valueStyle}{similar to `pathwayLabelStyle` but for NES and p-value columns.}
+
+\item{axisLabelStyle}{list with style parameter adjustments for stats axis labels.
+See `ggplot2::element_text` for possible options.}
+
+\item{render}{(deprecated)}
 }
 \value{
-TableGrob object returned by grid.arrange.
+ggplot object with enrichment barcode plots
 }
 \description{
 Plots table of enrichment graphs using ggplot and gridExtra.
@@ -40,11 +54,8 @@ Plots table of enrichment graphs using ggplot and gridExtra.
 \examples{
 data(examplePathways)
 data(exampleRanks)
-fgseaRes <- fgsea(examplePathways, exampleRanks, nperm=1000,
-                  minSize=15, maxSize=100)
+fgseaRes <- fgsea(examplePathways, exampleRanks, minSize=15, maxSize=500)
 topPathways <- fgseaRes[head(order(pval), n=15)][order(NES), pathway]
-\dontrun{
 plotGseaTable(examplePathways[topPathways], exampleRanks,
               fgseaRes, gseaParam=0.5)
-}
 }

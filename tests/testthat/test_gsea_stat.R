@@ -40,6 +40,20 @@ test_that("calcGseaStats(returnLeadingEdge=TRUE) works", {
     expect_false(10 %in% gseaRes$leadingEdge)
 })
 
+test_that("leading edge is consistent", {
+    stats <- exampleRanks
+    pathway <- examplePathways[[1]]
+
+    set.seed(1)
+    gseaRes <- fgseaSimple(list(p=pathway), stats, nperm=2)
+    gseaResRev <- fgseaSimple(list(p=pathway), -stats, nperm=2)
+
+    expect_identical(gseaRes$leadingEdge, gseaResRev$leadingEdge)
+
+    gseaResPos <- fgseaSimple(list(p=pathway), stats, nperm=2, scoreType = "pos")
+    expect_identical(gseaRes$leadingEdge, gseaResPos$leadingEdge)
+})
+
 test_that("calcGseaStats returns zero when both sides are equally enriched", {
     stats <- 10:-10
     sample <- 10:12

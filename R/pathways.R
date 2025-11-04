@@ -91,6 +91,7 @@ mapIdsList <- function(x, keys, column, keytype, ...) {
     keysUnique <- unique(keysFlat)
     ansUnique <- AnnotationDbi::mapIds(x=x, keys=keysUnique, column=column, keytype=keytype, ...)
     ansFlat <- ansUnique[keysFlat]
-    ans <- split(ansFlat, rep(seq_along(keys), sapply(keys, length)))
+    ans <- split(ansFlat, rep(seq_along(keys), lengths(keys)))
+    names(ans) <- names(keys)
     ans
 }

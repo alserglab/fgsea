@@ -29,7 +29,7 @@ test_that("fgseaSimple works", {
     expect_false(all(fgseaRes$nMoreExtreme %% 2 == 0))
 })
 
-test_that("fgseaSimple is reproducable independent of bpparam settings", {
+test_that("fgseaSimple is reproducible independent of bpparam settings", {
 
     data(examplePathways)
     data(exampleRanks)
@@ -104,20 +104,34 @@ test_that("Ties detection in ranking works", {
     exampleRanks.ties.zero <- exampleRanks.ties
     exampleRanks.ties.zero[41] <- exampleRanks.ties.zero[42] <- 0
 
-    expect_silent(fgseaSimple(examplePathways, exampleRanks, nperm=100, minSize=10, maxSize=50, nproc=1))
+    expect_silent(fgseaSimple(examplePathways, exampleRanks, nperm=100,
+                              minSize=10, maxSize=50, BPPARAM=SerialParam()))
 
-    expect_warning(fgseaSimple(examplePathways, exampleRanks.ties, nperm=100, minSize=10, maxSize=50, nproc=1))
+    expect_warning(fgseaSimple(examplePathways, exampleRanks.ties, nperm=100,
+                               minSize=10, maxSize=50, BPPARAM=SerialParam()))
 
-    expect_silent(fgseaSimple(examplePathways, exampleRanks.ties.zero, nperm=100, minSize=10, maxSize=50, nproc=1))
+    expect_silent(fgseaSimple(examplePathways, exampleRanks.ties.zero, nperm=100,
+                              minSize=10, maxSize=50, BPPARAM=SerialParam()))
 })
 
-test_that("fgseaSimple throws a warning when there are duplicate gene names", {
+test_that("fgseaSimple correctly checks gene names", {
     data(examplePathways)
     data(exampleRanks)
     exampleRanks.dupNames <- exampleRanks
     names(exampleRanks.dupNames)[41] <- names(exampleRanks.dupNames)[42]
 
-    expect_warning(fgseaSimple(examplePathways, exampleRanks.dupNames, nperm=100, minSize=10, maxSize=50, nproc=1))
+    expect_error(fgseaSimple(examplePathways, exampleRanks.dupNames, nperm=100, minSize=10, maxSize=50, nproc=1))
+
+    ranks <- exampleRanks
+    names(ranks)[41] <- NA
+    expect_error(fgseaSimple(examplePathways, ranks, nperm=100, minSize=10, maxSize=50, nproc=1))
+
+    ranks <- exampleRanks
+    names(ranks)[41] <- ""
+    expect_error(fgseaSimple(examplePathways, ranks, nperm=100, minSize=10, maxSize=50, nproc=1))
+
+    ranks <- unname(exampleRanks)
+    expect_error(fgseaSimple(examplePathways, ranks, nperm=100, minSize=10, maxSize=50, nproc=1))
 
 })
 
@@ -164,7 +178,7 @@ test_that("fgseaSimple throws a warning when there are unbalanced gene-level sta
     expect_warning(fgseaSimple(pathway, ranks, nperm = 200, minSize = 15, maxSize = 500))
 })
 
-test_that("fgseaSimple and fgseaMultilevel properly handle duplicated in gene sets", {
+test_that("fgseaSimple and fgseaMultilevel properly handle duplicated genes in gene sets", {
     data(exampleRanks)
     data(examplePathways)
 
@@ -198,4 +212,75 @@ test_that("fgsea works correctly if gene sets have signed ES = 0 and scoreType !
 
     set.seed(1)
     expect_silent(fr <- fgseaSimple(gsInHead, stats, nperm = 1000, scoreType = "neg"))
+})
+
+test_that("fgsea skips pathways containing all the possible genes", {
+    data("exampleRanks")
+    fr <- fgseaSimple(list(p=names(exampleRanks)), exampleRanks, nperm = 1, maxSize=Inf)
+    expect_true(!is.null(fr))
+})
+
+test_that("fgseaMultilevel handels superdiscrete cases (like issue #151)", {
+    set.seed(42)
+    stats <- rep(1, 5000)
+    names(stats) <- paste0("g", seq_along(stats))
+    system.time(res <- fgseaMultilevel(pathways=list(p=names(stats)[1:10]),
+                           stats=stats, scoreType = "pos", eps=0, sampleSize = 21))
+    expect_true(is.na(res$log2err))
+})
+
+test_that("leadingEdge interacts correctly with scoreType", {
+    data(examplePathways)
+    data(exampleRanks)
+    set.seed(42)
+    nperm <- 100
+    fr <- fgseaSimple(examplePathways, exampleRanks, nperm=nperm, minSize=15, maxSize=50)
+    fr <- fr[order(-abs(NES))]
+
+    posP <- head(fr[ES > 0, pathway], 1)
+    negP <- head(fr[ES < 0, pathway], 1)
+
+    pp <- examplePathways[c(posP, negP)]
+
+    frStd <- fgseaSimple(pp, exampleRanks, nperm=nperm, scoreType = "std")
+    expect_true(exampleRanks[frStd$leadingEdge[[1]][1] ] > 0)
+    expect_true(exampleRanks[frStd$leadingEdge[[2]][1] ] < 0)
+
+
+    frPos <- fgseaSimple(pp, exampleRanks, nperm=nperm, scoreType = "pos")
+    expect_true(exampleRanks[frPos$leadingEdge[[1]][1] ] > 0)
+    expect_true(exampleRanks[frPos$leadingEdge[[2]][1] ] > 0)
+
+    frNeg <- fgseaSimple(pp, exampleRanks, nperm=nperm, scoreType = "neg")
+    expect_true(exampleRanks[frNeg$leadingEdge[[1]][1] ] < 0)
+    expect_true(exampleRanks[frNeg$leadingEdge[[2]][1] ] < 0)
+})
+
+test_that("fgseaSimple is reproducible between platforms, issues #170, #80", {
+    feats <- c(3, -1, -4.1, 42, 0, 12, 13, -13, 0.01, 0)
+    names(feats) <- paste0("gene", 1:length(feats))
+
+    some_sets <- list(
+        "pathway1" = c("gene2", "gene3"),
+        "pathway4" = paste0("gene", 1:7)
+    )
+    set.seed(42)
+    fr <- fgseaSimple(some_sets, feats, nproc = 1, nperm=1000)
+    expect_identical(fr$nMoreExtreme, c(139, 76))
+
+
+    stats <- c(gene1 = 3, gene2 = 1, gene3 = 4.1, gene4 = 42, gene5 = 0,
+               gene6 = 12, gene7 = 13,  gene8 = 13, gene9 = 0.01,  gene10 = 0)
+    gseaParam <- 1
+    pathwayScores <- c(pathway1 = -0.875, pathway4 = 0.932)
+    pathwaysSizes <- c(pathway1 = 2L, pathway4 = 7L)
+    iterations <- 1000
+    seed <- 707850213
+    scoreType <- "std"
+
+    res <- .Call("_fgsea_calcGseaStatCumulativeBatch", PACKAGE = "fgsea", stats,
+                 gseaParam , pathwayScores, pathwaysSizes, iterations, seed, scoreType)
+
+    expect_identical(res$leEs, c(35, 968))
+    expect_identical(res$geEs, c(981, 32))
 })

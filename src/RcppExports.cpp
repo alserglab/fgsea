@@ -73,12 +73,29 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// gesecaCpp
+Rcpp::List gesecaCpp(const NumericMatrix& E, const NumericVector& inpScores, unsigned genesetSize, unsigned sampleSize, int seed, double eps);
+RcppExport SEXP _fgsea_gesecaCpp(SEXP ESEXP, SEXP inpScoresSEXP, SEXP genesetSizeSEXP, SEXP sampleSizeSEXP, SEXP seedSEXP, SEXP epsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const NumericMatrix& >::type E(ESEXP);
+    Rcpp::traits::input_parameter< const NumericVector& >::type inpScores(inpScoresSEXP);
+    Rcpp::traits::input_parameter< unsigned >::type genesetSize(genesetSizeSEXP);
+    Rcpp::traits::input_parameter< unsigned >::type sampleSize(sampleSizeSEXP);
+    Rcpp::traits::input_parameter< int >::type seed(seedSEXP);
+    Rcpp::traits::input_parameter< double >::type eps(epsSEXP);
+    rcpp_result_gen = Rcpp::wrap(gesecaCpp(E, inpScores, genesetSize, sampleSize, seed, eps));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_fgsea_calcGseaStatCumulativeBatch", (DL_FUNC) &_fgsea_calcGseaStatCumulativeBatch, 7},
     {"_fgsea_calcGseaStatCumulative", (DL_FUNC) &_fgsea_calcGseaStatCumulative, 4},
     {"_fgsea_calcGseaStatBatchCpp", (DL_FUNC) &_fgsea_calcGseaStatBatchCpp, 3},
     {"_fgsea_fgseaMultilevelCpp", (DL_FUNC) &_fgsea_fgseaMultilevelCpp, 9},
+    {"_fgsea_gesecaCpp", (DL_FUNC) &_fgsea_gesecaCpp, 6},
     {NULL, NULL, 0}
 };
 

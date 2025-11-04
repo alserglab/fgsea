@@ -10,6 +10,7 @@
 #'  \item pathway -- name of the pathway as in `names(pathway)`;
 #'  \item pval -- an enrichment p-value from hypergeometric test;
 #'  \item padj -- a BH-adjusted p-value;
+#'  \item foldEnrichment -- degree of enrichment relative to background;
 #'  \item overlap -- size of the overlap;
 #'  \item size -- size of the gene set;
 #'  \item leadingEdge -- vector with overlapping genes.
@@ -20,41 +21,27 @@
 #' data(examplePathways)
 #' data(exampleRanks)
 #' foraRes <- fora(examplePathways, genes=tail(names(exampleRanks), 200), universe=names(exampleRanks))
-fora <- function(pathways, genes, universe, minSize=1, maxSize=Inf) {
-    # Error if pathways is not a list
-    if (!is.list(pathways)) {
-        stop("pathways should be a list with each element containing genes from the universe")
-    }
+fora <- function(pathways, genes, universe, minSize=1, maxSize=length(universe)-1) {
+    pp <- preparePathways(pathways, universe, minSize, maxSize)
+    pathwaysFiltered <- pp$filtered
+    pathwaysSizes <- pp$sizes
 
-    # Warning message for duplicate gene names
-    if (any(duplicated(universe))) {
-        warning("There were duplicate genes in universe, they were collapsed")
-        universe <- unique(universe)
-    }
 
-    minSize <- max(minSize, 1)
-
-    pathwaysFiltered <- lapply(pathways, function(p) { unique(na.omit(fmatch(p, universe))) })
-    pathwaysSizes <- sapply(pathwaysFiltered, length)
-
-    toKeep <- which(minSize <= pathwaysSizes & pathwaysSizes <= maxSize)
-
-    if (length(toKeep) == 0){
+    if (length(pathwaysFiltered) == 0){
         return(data.table(pathway=character(),
                           pval=numeric(),
                           padj=numeric(),
+                          foldEnrichment=numeric(),
                           overlap=integer(),
                           size=integer(),
                           overlapGenes=list()))
     }
 
-    pathwaysFiltered <- pathwaysFiltered[toKeep]
-    pathwaysSizes <- pathwaysSizes[toKeep]
-
 
     if (!all(genes %in% universe)) {
         warning("Not all of the input genes belong to the universe, such genes were removed")
     }
+
     genesFiltered <- unique(na.omit(fmatch(genes, universe)))
 
     overlaps <- lapply(pathwaysFiltered, intersect, genesFiltered)
@@ -67,6 +54,8 @@ fora <- function(pathways, genes, universe, minSize=1, maxSize=Inf) {
         n=length(universe)-sapply(pathwaysFiltered, length),
         k=length(genesFiltered))
 
+    overlapsT[, es := (q/k)/(m/length(universe))]
+
     # q-1 because we want probability of having >=q white balls
     pathways.pvals <- with(overlapsT,
                            phyper(q-1, m, n, k, lower.tail = FALSE))
@@ -74,6 +63,7 @@ fora <- function(pathways, genes, universe, minSize=1, maxSize=Inf) {
     res <- data.table(pathway=names(pathwaysFiltered),
                       pval=pathways.pvals,
                       padj=p.adjust(pathways.pvals, method="BH"),
+                      foldEnrichment=overlapsT$es,
                       overlap=overlapsT$q,
                       size=overlapsT$m,
                       overlapGenes=overlapGenes)

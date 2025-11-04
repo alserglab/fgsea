@@ -1,0 +1,547 @@
+---
+title: "Gene set co-regulation analysis tutorial"
+output: 
+    rmarkdown::html_vignette:
+        toc: true
+vignette: >
+  %\VignetteIndexEntry{Gene set co-regulation analysis tutorial}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r echo=FALSE}
+library(BiocParallel)
+register(SerialParam())
+```
+
+This vignette describes GESECA (gene set co-regulation analysis): a method
+to identify gene sets that have high gene correlation.
+We will show how GESECA can be used to find regulated pathways
+in multi-conditional data, where there is no obvious contrast that 
+can be used to rank genes for GSEA analysis.
+As examples we will consider a time course microarray experiment 
+and a spatial transcriptomics dataset.
+
+## Overiew of GESECA method
+
+GESECA takes as an input:
+
+* *E* - gene expression matrix, where rows and columns correspond to genes and samples respectively.
+* *P* - list of gene sets (i.e. 
+[hallmark gene sets](http://www.gsea-msigdb.org/gsea/msigdb/human/collections.jsp#H)).
+
+**Note**: genes identifier type should be the same for both elements of *P* and for row names of matrix *E*.
+
+By default, GESECA method performs centering for rows of the matrix *E*. 
+So, after that, the gene values are assumed to have zero mean.
+Then for each gene set *p* in *P* let us introduce the gene set score in the following form:
+
+```{r eval=FALSE}
+score <- sum(colSums(E[p, ])**2) / length(p)
+```
+
+This score was inspired by the variance of principal components 
+from the principal component analysis (PCA).
+Therefore, the given score can be viewed in terms of explained variance by the gene set *p*.
+Geometrically, this can be considered as an embedding of samples into 
+a one-dimensional space, given by a unit vector in which nonzero 
+positions correspond to genes from gene set *p*.
+
+In the case of row-centered matrix *E* the variance of 
+highly correlated genes is summed up to a higher score.
+While the genes that are not correlated cancel each other and the total
+gene set variance is low.
+See the toy example:
+
+![Toy example of GESECA score calculation](geseca-vignette-score-toy-example.png){width=90%}
+
+Another major feature of the proposed score is that it does not require 
+an explicit sample annotation or a contrast.
+As the result, GESECA can be applied to various types of sequencing technologies: RNA-seq, single-cell sequencing, spatial RNA-seq, etc.
+
+To assess statistical significance for a given gene set *p* we calculate 
+an empirical P-value by using gene permutations.
+The definition of the P-value is given by the following expression:
+\[
+    \mathrm{P} \left(\text{random score} \geqslant \text{score of p} \right).
+\]
+The estimation of the given P-value is done by sampling random gene sets 
+with the same size as *p* from the row names of matrix *E*.
+In practice, the theoretical P-value can be extremely small, 
+so we use the adaptive multilevel Markov Chain Monte Carlo scheme,
+that we used previously in `fgseaMultilevel` procedure.
+For more details, see the [preprint](https://www.biorxiv.org/content/10.1101/060012v3).
+
+## Analysis of time course data
+
+In the first example we will consider a time course data of Th2 activation
+from the dataset GSE200250.
+
+First, let prepare the dataset. We load it from Gene Expression Omnibus,
+apply log and quantile normalization and filter lowly expressed genes.
+
+```{r message=FALSE}
+library(GEOquery)
+library(limma)
+
+gse200250 <- getGEO("GSE200250", AnnotGPL = TRUE)[[1]]
+
+es <- gse200250
+es <- es[, grep("Th2_", es$title)]
+es$time <- as.numeric(gsub(" hours", "", es$`time point:ch1`))
+es <- es[, order(es$time)]
+
+exprs(es) <- normalizeBetweenArrays(log2(exprs(es)), method="quantile")
+
+es <- es[order(rowMeans(exprs(es)), decreasing=TRUE), ]
+es <- es[!duplicated(fData(es)$`Gene ID`), ]
+rownames(es) <- fData(es)$`Gene ID`
+es <- es[!grepl("///", rownames(es)), ]
+es <- es[rownames(es) != "", ]
+
+fData(es) <- fData(es)[, c("ID", "Gene ID", "Gene symbol")]
+
+es <- es[head(order(rowMeans(exprs(es)), decreasing=TRUE), 12000), ]
+head(exprs(es))
+```
+
+
+Then we obtain the pathway list. Here we use Hallmarks
+collection from MSigDB database.
+
+
+```{r}
+library(msigdbr)
+pathwaysDF <- msigdbr(species="mouse", collection="H")
+pathways <- split(as.character(pathwaysDF$ncbi_gene), pathwaysDF$gs_name)
+```
+
+Now we can run GESECA analysis:
+
+```{r message=FALSE}
+library(fgsea)
+set.seed(1)
+gesecaRes <- geseca(pathways, exprs(es), minSize = 15, maxSize = 500)
+```
+
+The resulting table contain GESECA scores and the corresponding P-values:
+```{r}
+head(gesecaRes, 10)
+```
+
+We can plot gene expression profile of HALLMARK_E2F_TARGETS pathway and see
+that these genes are strongly activated at 24 hours time point:
+
+
+```{r fig.width=10, fig.height=4, out.width="100%"}
+plotCoregulationProfile(pathway=pathways[["HALLMARK_E2F_TARGETS"]], 
+                        E=exprs(es), titles = es$title, conditions=es$`time point:ch1`)
+```
+
+Hypoxia genes have slightly different profile, getting activated around 48 hours:
+
+
+```{r fig.width=10, fig.height=4, out.width="100%"}
+plotCoregulationProfile(pathway=pathways[["HALLMARK_HYPOXIA"]], 
+                        E=exprs(es), titles = es$title, conditions=es$`time point:ch1`)
+
+
+```
+
+To get an overview of the top pathway patterns we can use `plotGesecaTable`
+function:
+
+```{r fig.width=10, fig.height=6, out.width="100%"}
+plotGesecaTable(gesecaRes |> head(10), pathways, E=exprs(es), titles = es$title)
+```
+
+When the expression matrix contains many samples, a PCA-reduced expression matrix
+can be used instead of the full matrix to improve the performance. 
+Let reduce the sample space from `r ncol(es)` to 10 dimensions, preserving as much gene variation as possible.
+
+```{r}
+E <- t(base::scale(t(exprs(es)), scale=FALSE))
+pcaRev <- prcomp(E, center=FALSE)
+Ered <- pcaRev$x[, 1:10]
+dim(Ered)
+```
+
+Now we can run GESECA on the reduced matrix, however we need to disable automatic centering, as we already have done it before the reduction.
+
+```{r}
+set.seed(1)
+gesecaResRed <- geseca(pathways, Ered, minSize = 15, maxSize = 500, center=FALSE)
+head(gesecaResRed, 10)
+```
+
+The scores and P-values are similar to the ones we obtained for the full matrix.
+
+```{r fig.width=4, fig.height=4}
+library(ggplot2)
+ggplot(data=merge(gesecaRes[, list(pathway, logPvalFull=-log10(pval))],
+                  gesecaResRed[, list(pathway, logPvalRed=-log10(pval))])) +
+    geom_point(aes(x=logPvalFull, y=logPvalRed)) +
+    coord_fixed() + theme_classic()
+```
+
+
+## Analysis of single-cell RNA-seq
+
+Let us load necessary libraries. We a going to use `Seurat` package for working with singe cell data.
+
+```{r}
+suppressMessages(library(Seurat))
+```
+
+As an example dataset we will use GSE116240 (https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE116240).
+The dataset features single cell RNA sequencing of aortic CD45+ cells 
+and foam cells from atherosclerotic aorta and is extensively described 
+in the corresponding publication (https://pubmed.ncbi.nlm.nih.gov/30359200/).
+We also thank the authors for providing the corresponding Seurat object
+used for the publication.
+
+```{r fig.width=8, fig.height=3.5}
+obj <- readRDS(url("https://alserglab.wustl.edu/files/fgsea/GSE116240.rds"))
+obj
+
+newIds <- c("0"="Adventitial MF",
+            "3"="Adventitial MF",
+            "5"="Adventitial MF",
+            "1"="Intimal non-foamy MF",
+            "2"="Intimal non-foamy MF",
+            "4"="Intimal foamy MF",
+            "7"="ISG+ MF",
+            "8"="Proliferating cells",
+            "9"="T-cells",
+            "6"="cDC1",
+            "10"="cDC2",
+            "11"="Non-immune cells")
+
+obj <- RenameIdents(obj, newIds)
+
+DimPlot(obj) + ggplot2::coord_fixed()
+```
+
+We apply an appropriate normalization (note that we are using 10000 genes, 
+which will be later used as a gene universe for the analysis):
+
+```{r}
+obj <- SCTransform(obj, verbose = FALSE, variable.features.n = 10000)
+```
+
+To speed up the analysis, instead of using the full transformed
+gene expression matrix, we will consider only its first 
+principal components. Note that a "reverse" PCA should be done: 
+the principal components should correspond to linear combinations
+of the cells, not linear combinations of the genes as in "normal" PCA.
+By default `SCTransform` returns centered gene expression, so we
+can run PCA directly.
+
+```{r}
+length(VariableFeatures(obj)) # make sure it's a full gene universe of 10000 genes
+obj <- RunPCA(obj, assay = "SCT", verbose = FALSE,
+                rev.pca = TRUE, reduction.name = "pca.rev",
+              reduction.key="PCR_", npcs = 50)
+
+E <- obj@reductions$pca.rev@feature.loadings
+```
+
+Following the authors we are going to use KEGG pathway collection.
+
+```{r}
+library(msigdbr)
+
+pathwaysDF <- msigdbr(species="mouse", collection="C2", subcollection = "CP:KEGG_LEGACY")
+pathways <- split(pathwaysDF$gene_symbol, pathwaysDF$gs_name)
+```
+
+Now we can run the analysis (we set `center=FALSE` because we use the 
+reduced matrix):
+
+
+```{r}
+set.seed(1)
+gesecaRes <- geseca(pathways, E, minSize = 5, maxSize = 500, center = FALSE, eps=1e-100)
+
+head(gesecaRes, 10)
+```
+
+
+Now we can plot profiles of the top pathways (we need to specify the reduction
+as we are using the one from the publication):
+
+```{r fig.width=12, fig.height=7, out.width="100%"}
+topPathways <- gesecaRes[, pathway] |> head(4)
+titles <- sub("KEGG_", "", topPathways)
+
+ps <- plotCoregulationProfileReduction(pathways[topPathways], obj,
+                                       title=titles,
+                                       reduction="tsne")
+cowplot::plot_grid(plotlist=ps[1:4], ncol=2)
+```
+
+We can see that inflammatory pathways (e.g. KEGG_LEISHMANIA_INFECTION) are 
+more associated with the non-foamy intimal macrophages, which was one of the
+main points of the Kim et al. Another pathway highlighted by the authors, KEGG_LYSOSOME, is specific to intimal foamy macrophages:
+
+```{r fig.width=5, fig.height=3.5, out.width="50%"}
+plotCoregulationProfileReduction(pathways$KEGG_LYSOSOME, 
+                               obj,
+                               title=sprintf("KEGG_LYSOSOME (pval=%.2g)",
+                                             gesecaRes[match("KEGG_LYSOSOME", pathway), pval]),
+                               reduction="tsne")
+```
+
+## Analysis of spatial transcriptomic data
+
+### Analysis of 10X visium spatial data
+
+Similarly to single cell RNA-seq, GESECA can be used for gene set enrichment analysis of spatial
+transcriptomics profiling. As an example we will use glioblastoma 
+sample from Ravi et al (https://pubmed.ncbi.nlm.nih.gov/35700707/).
+
+```{r message=FALSE}
+library(Seurat)
+
+obj <- readRDS(url("https://alserglab.wustl.edu/files/fgsea/275_T_seurat.rds"))
+```
+
+
+As for scRNA-seq, we apply normalization for 10000 genes and run a do a PCA reduction.
+
+```{r}
+obj <- SCTransform(obj, assay = "Spatial", verbose = FALSE, variable.features.n = 10000)
+
+obj <- RunPCA(obj, assay = "SCT", verbose = FALSE,
+                rev.pca = TRUE, reduction.name = "pca.rev",
+              reduction.key="PCR_", npcs = 50)
+
+E <- obj@reductions$pca.rev@feature.loadings
+```
+
+We will use HALLMARK pathways as the gene set collection.
+
+```{r}
+library(msigdbr)
+pathwaysDF <- msigdbr(species="human", collection="H")
+pathways <- split(pathwaysDF$gene_symbol, pathwaysDF$gs_name)
+```
+
+Now we can run the analysis (remember, we set `center=FALSE` because we use the 
+reduced matrix):
+
+```{r}
+set.seed(1)
+gesecaRes <- geseca(pathways, E, minSize = 15, maxSize = 500, center = FALSE)
+
+head(gesecaRes, 10)
+```
+
+Finally, let us plot spatial expression of the top four pathways:
+
+```{r fig.width=10, fig.height=7, out.width="100%"}
+
+topPathways <- gesecaRes[, pathway] |> head(4)
+titles <- sub("HALLMARK_", "", topPathways)
+
+pt.size.factor <- 1.6
+
+
+# Starting from Seurat version 5.1.0, the scaling method for spatial plots was changed.
+# As mentioned here: https://github.com/satijalab/seurat/issues/9049
+# This code provides a workaround to adapt to the new scaling behavior.
+if (packageVersion("Seurat") >= "5.1.0"){
+    sfactors <- ScaleFactors(obj@images$slice1)
+    pt.size.factor <- 1.5 * sfactors$fiducial / sfactors$hires
+}
+
+ps <- plotCoregulationProfileSpatial(pathways[topPathways], obj,
+                                     title=titles, 
+                                     pt.size.factor=pt.size.factor)
+cowplot::plot_grid(plotlist=ps, ncol=2)
+```
+
+<!-- ![](geseca-spatial-top.png){width=100%} -->
+
+Consistent with the Ravi et al, we see a distinct hypoxic region (defined by HALLMARK_HYPOXIA) and a reactive immune region (defined by HALLMARK_INTERFERON_GAMMA_RESPONSE). Further, we can explore behavior of 
+HALLMARK_OXIDATIVE_PHOSPHORYLATION pathway to see that oxidative metabolism
+is more characteristic to the "normal" tissue region:
+
+```{r fig.width=5, fig.height=3.5, out.width="50%"}
+plotCoregulationProfileSpatial(pathways$HALLMARK_OXIDATIVE_PHOSPHORYLATION,
+                               obj,
+                               pt.size.factor=pt.size.factor,
+                               title=sprintf("HALLMARK_OXIDATIVE_PHOSPHORYLATION\n(pval=%.2g)",
+                                             gesecaRes[
+                                                 match("HALLMARK_OXIDATIVE_PHOSPHORYLATION", pathway),
+                                                 pval]))
+```
+
+
+### Analysis of 10X xenium spatial transcriptomics data
+
+GESECA can also be applied to spatial transcriptomics data generated by high-plex in situ technologies with subcellular resolution, such as 10X Genomics' Xenium platform. In this example, we analyze a Human Ovarian Cancer sample profiled using the Xenium 5K panel.
+
+The raw data used in this analysis is publicly available and can be downloaded from the following sources:
+
+- Xenium output bundle: [Download link](https://s3-us-west-2.amazonaws.com/10x.files/samples/xenium/3.0.0/Xenium_Prime_Ovarian_Cancer_FFPE_XRrun/Xenium_Prime_Ovarian_Cancer_FFPE_XRrun_outs.zip)
+- Cell annotation file: [Download link](https://cf.10xgenomics.com/samples/xenium/3.0.0/Xenium_Prime_Ovarian_Cancer_FFPE_XRrun/Xenium_Prime_Ovarian_Cancer_FFPE_XRrun_cell_groups.csv)
+
+
+To prepare the data for GESECA analysis, we carried out the following custom preprocessing steps using Seurat:
+
+```{r eval=FALSE}
+fldr <- ""         # Path to downloaded Xenium output
+annf_path <- ""    # Path to downloaded cell annotation CSV
+
+# Load the Xenium data as a Seurat object
+xobj <- Seurat::LoadXenium(fldr, molecule.coordinates = FALSE)
+
+# Remove assays not needed for downstream analysis
+for (nm in names(xobj@assays)[-1]) {
+    xobj@assays[[nm]] <- NULL
+}
+
+# Add spatial coordinates to metadata
+coords <- data.table::as.data.table(xobj@images$fov@boundaries$centroids@coords)
+xobj@meta.data <- cbind(xobj@meta.data, coords)
+
+# Integrate external cell annotations
+annot <- data.table::fread(annf_path)
+xobj <- xobj[, rownames(xobj@meta.data) %in% annot$cell_id]
+xobj@meta.data$annotation <- annot[match(rownames(xobj@meta.data), annot$cell_id), ]$group
+xobj@meta.data$annotation <- factor(xobj@meta.data$annotation)
+
+
+
+# Filter out low-quality cells
+xobj <- subset(xobj, subset = nCount_Xenium > 50)
+
+
+# Optional: Crop the region and subsample the object
+# These steps reduce size and complexity for a more compact vignette
+# Helps keep the vignette lightweight and quick to render
+xobj <- xobj[, xobj$x < 3000 & xobj$y < 4000]
+set.seed(1)
+xobj <- xobj[, sample.int(ncol(xobj), 40000)]
+
+# Normalize and scale data
+xobj <- NormalizeData(xobj, normalization.method = "LogNormalize", scale.factor = 1000, verbose = FALSE)
+xobj <- FindVariableFeatures(xobj, nfeatures = 2000, verbose = FALSE)
+xobj <- ScaleData(xobj, verbose = FALSE)
+
+# Perform PCA and UMAP dimensionality reduction
+xobj <- RunPCA(xobj, verbose = FALSE)
+xobj <- RunUMAP(xobj, dims = 1:20)
+```
+
+Additionally, before saving the object for use in the vignette, we remove the following components from the Seurat object to reduce its size and keep it tidy:
+```{r eval=FALSE}
+xobj@reductions$pca <- NULL
+xobj@assays$Xenium@layers$scale.data <- NULL
+xobj@assays$Xenium@layers$data <- NULL
+```
+
+
+For this tutorial, we directly use the Seurat object that was preprocessed using the steps described above:
+```{r}
+xobj <- readRDS(url("https://alserglab.wustl.edu/files/fgsea/xenium-human-ovarian-cancer.rds"))
+
+xobj <- NormalizeData(xobj, verbose = FALSE)
+xobj <- ScaleData(xobj, verbose = FALSE)
+```
+
+
+The plot below compares the spatial localization of annotated cells (left) with their transcriptional similarity via UMAP (right):
+
+```{r fig.width=10, fig.height=5, out.width="100%"}
+p1 <- ImageDimPlot(xobj, group.by = "annotation",
+                   dark.background = FALSE, size = 0.5, 
+                   flip_xy = TRUE) + 
+    theme(legend.position = "none")
+
+p1 <- suppressMessages(p1 + coord_flip() + scale_x_reverse() + theme(aspect.ratio = 1.0))
+
+p2 <- DimPlot(xobj, group.by = "annotation", raster = FALSE, pt.size = 0.5, stroke.size = 0.0) + 
+    coord_fixed()
+
+p1 | p2
+```
+
+The command `suppressMessages(p1 + coord_flip() + scale_x_reverse() + theme(aspect.ratio = 1.0))` adjusts the plot orientation to match the spatial layout shown in the [Xenium Explorer web viewer](https://www.10xgenomics.com/datasets/xenium-prime-ffpe-human-ovarian-cancer), ensuring consistency between the analysis and the original data presentation.
+
+We will now perform the GESECA analysis in the same manner as previously demonstrated with both scRNA-seq and Visium datasets. For consistency and interpretability, we will once again use the HALLMARK gene sets from the MSigDB collection.
+
+```{r}
+xobj <- RunPCA(xobj, verbose = F, rev.pca = TRUE, reduction.name = "pca.rev", 
+               reduction.key="PCR_", npcs=30)
+
+E <- xobj@reductions$pca.rev@feature.loadings
+
+gsets <- msigdbr(species="human", collection="H")
+gsets <- split(gsets$gene_symbol, gsets$gs_name)
+
+set.seed(1)
+gesecaRes <- geseca(gsets, E, minSize = 15, maxSize = 500, center = FALSE, eps = 1e-100)
+
+head(gesecaRes, 10)
+```
+
+Next, we visualize the top enriched pathways identified by GESECA using UMAP embeddings. This allows us to assess transcriptional patterns of gene set activity across cells.
+
+
+```{r fig.width=10, fig.height=7, out.width="100%"}
+topPathways <- gesecaRes[, pathway] |> head(6)
+titles <- sub("HALLMARK_", "", topPathways)
+pvals <- gesecaRes[match(topPathways, pathway), pval]
+pvals <- paste("p-value:", formatC(pvals, digits = 1, format = "e"))
+
+titles <- paste(titles, pvals, sep = "\n")
+
+plots <- fgsea::plotCoregulationProfileReduction(
+    gsets[topPathways], xobj, 
+    reduction = "umap", title = titles,
+    raster = TRUE, raster.dpi = c(500, 500),
+    pt.size = 2.5
+)
+
+plots <- lapply(plots, function(p){
+    p + theme(plot.title = element_text(hjust=0), text = element_text(size=10))
+})
+
+
+cowplot::plot_grid(plotlist = plots, ncol = 2)
+```
+
+In addition to UMAP plots, you can visualize the spatial expression patterns of the most enriched pathways using the `plotCoregulationProfileImage` function. This enables a detailed view of how pathway activities vary across spatial coordinates:
+
+```{r fig.width=10, fig.height=15, out.width="100%"}
+imagePlots <- plotCoregulationProfileImage(
+    gsets[topPathways], object = xobj, 
+    dark.background = FALSE, 
+    title = titles, 
+    size=0.8
+)
+
+imagePlots <- lapply(imagePlots, function(p){
+    suppressMessages(
+        p + coord_flip() + scale_x_reverse() + 
+            theme(plot.title = element_text(hjust=0), text = element_text(size=10), aspect.ratio = 1.0)
+    )
+})
+
+cowplot::plot_grid(plotlist = imagePlots, ncol = 2)
+```
+
+## Session info
+
+```{r echo=TRUE}
+sessionInfo()
+```
