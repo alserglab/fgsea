@@ -372,6 +372,7 @@ EsRuler::PerturbateResult EsRuler::perturbate_until(vector<int64_t> const& ranks
 
         int newVal = uid_n();
 
+        // TODO: might be beneficial to replace with linear search for small sizes
         int newChunkInd = upper_bound(chunkLastElement.begin(), chunkLastElement.end(), newVal) - chunkLastElement.begin();
         int newIndInChunk = lower_bound(sampleChunks.chunks[newChunkInd].begin(), sampleChunks.chunks[newChunkInd].end(), newVal) - sampleChunks.chunks[newChunkInd].begin();
 
