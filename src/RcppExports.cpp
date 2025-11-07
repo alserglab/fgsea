@@ -55,13 +55,13 @@ BEGIN_RCPP
 END_RCPP
 }
 // fgseaMultilevelCpp
-DataFrame fgseaMultilevelCpp(const NumericVector& enrichmentScores, const NumericVector& ranks, int pathwaySize, int sampleSize, int seed, double eps, bool sign, double moveScale, bool logStatus);
+DataFrame fgseaMultilevelCpp(const NumericVector& enrichmentScores, const SEXP& ranks, int pathwaySize, int sampleSize, int seed, double eps, bool sign, double moveScale, bool logStatus);
 RcppExport SEXP _fgsea_fgseaMultilevelCpp(SEXP enrichmentScoresSEXP, SEXP ranksSEXP, SEXP pathwaySizeSEXP, SEXP sampleSizeSEXP, SEXP seedSEXP, SEXP epsSEXP, SEXP signSEXP, SEXP moveScaleSEXP, SEXP logStatusSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< const NumericVector& >::type enrichmentScores(enrichmentScoresSEXP);
-    Rcpp::traits::input_parameter< const NumericVector& >::type ranks(ranksSEXP);
+    Rcpp::traits::input_parameter< const SEXP& >::type ranks(ranksSEXP);
     Rcpp::traits::input_parameter< int >::type pathwaySize(pathwaySizeSEXP);
     Rcpp::traits::input_parameter< int >::type sampleSize(sampleSizeSEXP);
     Rcpp::traits::input_parameter< int >::type seed(seedSEXP);

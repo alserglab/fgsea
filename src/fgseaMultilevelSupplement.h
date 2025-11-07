@@ -20,7 +20,7 @@ class EsRuler {
 private:
     using hash_t = uint64_t;
     using gsea_t = pair<score_t, hash_t>;
-    
+
     struct Level {
         //  score, is_positive
         vector<pair<gsea_t, bool>> lowScores, highScores;
@@ -31,9 +31,9 @@ private:
         int moves;
         int iters;
     };
-        
-    const bool logStatus;    
-    const vector<double> doubleRanks;
+
+    const bool logStatus;
+    // const vector<double> doubleRanks;
     const vector<int64_t> ranks;
     vector<hash_t> geneHashes;
     const unsigned int sampleSize;
@@ -78,7 +78,7 @@ private:
 
 public:
 
-    EsRuler(const vector<double> &inpRanks,
+    EsRuler(const vector<int64_t> &inpRanks,
             unsigned int inpSampleSize,
             unsigned int inpPathwaySize,
             double inpMovesScale,

@@ -23,14 +23,15 @@ pair<double, bool> calcLogCorrection(const vector<unsigned int> &probCorrector,
     }
 }
 
-EsRuler::EsRuler(const vector<double> &inpRanks,
+EsRuler::EsRuler(const vector<int64_t> &inpRanks,
                  unsigned int inpSampleSize,
                  unsigned int inpPathwaySize,
                  double inpMovesScale,
                  bool inpLog) :
     logStatus(inpLog),
-    doubleRanks(inpRanks),
-    ranks(scaleRanks(doubleRanks)),
+    // doubleRanks(inpRanks),
+    // ranks(scaleRanks(doubleRanks)),
+    ranks(inpRanks),
     geneHashes(inpRanks.size()),
     sampleSize(inpSampleSize),
     pathwaySize(inpPathwaySize),

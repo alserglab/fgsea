@@ -3,15 +3,19 @@
 using namespace std;
 
 DataFrame fgseaMultilevelCpp(const NumericVector& enrichmentScores,
-                             const NumericVector& ranks, int pathwaySize,
+                             const SEXP& ranks, int pathwaySize,
                              int sampleSize, int seed,double eps,
                              bool sign, double moveScale, bool logStatus)
 {
-    vector<double> posRanks = as<std::vector<double> >(ranks);
+    if (TYPEOF(ranks) != INTSXP) {
+        stop("Expected an integer ranks vector, got type '%s'", type2name(ranks));
+    }
+
+    vector<int64_t> posRanks = as<std::vector<int64_t> >(ranks);
     for (int i = 0; i < posRanks.size(); i++) {
         posRanks[i] = abs(posRanks[i]);
     }
-    vector<double> negRanks = posRanks;
+    vector<int64_t> negRanks = posRanks;
     reverse(negRanks.begin(), negRanks.end());
 
     const vector<double> esVector = as<std::vector<double> >(enrichmentScores);

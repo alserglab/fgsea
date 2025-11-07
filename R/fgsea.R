@@ -61,6 +61,17 @@ preparePathwaysAndStats <- function(pathways, stats, minSize, maxSize, gseaParam
     stats <- sort(stats, decreasing=TRUE)
     stats <- abs(stats) ^ gseaParam
 
+    # scaling weights to integer values for more stable calculations
+    # sum(stats) < 2**30 avoids integer overflows
+    scaleCoeff <- 2**30/sum(stats)
+    if (scaleCoeff >= 1) {
+        # scaling by an integer coefficient avoids information loss for integer input stats
+        scaleCoeff <- floor(scaleCoeff)
+    }
+
+    stats <- ceiling(stats * scaleCoeff)
+    storage.mode(stats) <- "integer"
+
     res <- preparePathways(pathways, universe=names(stats), minSize, maxSize)
 
     res$stats <- stats
