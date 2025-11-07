@@ -69,7 +69,8 @@ preparePathwaysAndStats <- function(pathways, stats, minSize, maxSize, gseaParam
         scaleCoeff <- floor(scaleCoeff)
     }
 
-    stats <- ceiling(stats * scaleCoeff)
+    # TODO: special treatment for small non-zero values?
+    stats <- round(stats * scaleCoeff)
     storage.mode(stats) <- "integer"
 
     res <- preparePathways(pathways, universe=names(stats), minSize, maxSize)

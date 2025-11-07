@@ -13,14 +13,13 @@ using namespace Rcpp;
 //' @param sign Controls whether ES^+ or ES score is used
 //' @param moveScale Controls the number of MCMC iterations on each level
 //' @param logStatus Controls whether debug output should be shown
-//'
+//' @return table with p-values and estimation errors
 //' @keyword internal
-//'
-// [[Rcpp::plugins(cpp17)]]
 // [[Rcpp::export]]
 DataFrame fgseaMultilevelCpp(const NumericVector& enrichmentScores,
                              const SEXP& ranks,
                              int pathwaySize, int sampleSize,
                              int seed, double eps, bool sign,
                              double moveScale = 1.0, bool logStatus = false);
+
 

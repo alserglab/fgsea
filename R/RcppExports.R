@@ -5,6 +5,20 @@ calcGseaStatCumulativeBatch <- function(stats, gseaParam, pathwayScores, pathway
     .Call('_fgsea_calcGseaStatCumulativeBatch', PACKAGE = 'fgsea', stats, gseaParam, pathwayScores, pathwaysSizes, iterations, seed, scoreType)
 }
 
+#' Calculates GSEA statistic values for all the prefixes of a gene set
+#'
+#' Takes \emph{O(k^\{3/2\})} time, where \emph{k} is a size of `selectedSize`.
+#' @param stats Named numeric vector with gene-level statistics
+#'     sorted in decreasing order (order is not checked)
+#' @param selectedStats indexes of selected genes in a `stats` array
+#' @param gseaParam GSEA weight parameter (0 is unweighted, suggested value is 1)
+#' @return Numeric vector of GSEA statistics for all prefixes of selectedStats.
+#' @export
+#' @examples
+#' data(exampleRanks)
+#' data(examplePathways)
+#' ranks <- sort(exampleRanks, decreasing=TRUE)
+#' es <- calcGseaStatCumulative(ranks, na.omit(match(examplePathways[[1]], names(ranks))), 1)
 calcGseaStatCumulative <- function(stats, selectedStats, gseaParam, scoreType = "std") {
     .Call('_fgsea_calcGseaStatCumulative', PACKAGE = 'fgsea', stats, selectedStats, gseaParam, scoreType)
 }
@@ -21,6 +35,18 @@ calcGseaStatBatchCpp <- function(stats, selectedGenes, geneRanks) {
     .Call('_fgsea_calcGseaStatBatchCpp', PACKAGE = 'fgsea', stats, selectedGenes, geneRanks)
 }
 
+#' Calculates low GSEA p-values for a given gene set size using the multilevel split Monte Carlo approach.
+#'
+#' @param enrichmentScores A vector of enrichment scores, for which p-values should be calculated
+#' @param ranks An integer vector with the gene-level statistics
+#' @param pathwaySize A scalar with the size of the gene set
+#' @param seed Random seed
+#' @param eps P-values below eps aren't calculated
+#' @param sign Controls whether ES^+ or ES score is used
+#' @param moveScale Controls the number of MCMC iterations on each level
+#' @param logStatus Controls whether debug output should be shown
+#' @return table with p-values and estimation errors
+#' @keyword internal
 fgseaMultilevelCpp <- function(enrichmentScores, ranks, pathwaySize, sampleSize, seed, eps, sign, moveScale = 1.0, logStatus = FALSE) {
     .Call('_fgsea_fgseaMultilevelCpp', PACKAGE = 'fgsea', enrichmentScores, ranks, pathwaySize, sampleSize, seed, eps, sign, moveScale, logStatus)
 }

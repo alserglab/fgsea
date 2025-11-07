@@ -1,3 +1,4 @@
+#pragma once
 #include <Rcpp.h>
 using namespace Rcpp;
 
@@ -28,7 +29,6 @@ List calcGseaStatCumulativeBatch(
 //' data(examplePathways)
 //' ranks <- sort(exampleRanks, decreasing=TRUE)
 //' es <- calcGseaStatCumulative(ranks, na.omit(match(examplePathways[[1]], names(ranks))), 1)
-// [[Rcpp::plugins(cpp11)]]
 // [[Rcpp::export]]
 NumericVector calcGseaStatCumulative(
         NumericVector const& stats,
