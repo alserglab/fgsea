@@ -16,6 +16,7 @@ using namespace std;
 
 const double eps = 1e-13;
 
+// not actually a segment tree, but a square root heuristic
 template <class T>
 class SegmentTree {
     private:
@@ -43,6 +44,7 @@ class SegmentTree {
             b = vector<T>(k2, 0);
         }
 
+        // works in O(sqrt(n))
         void inc(int p, T delta) {  // increase value at position p
             int blockEnd = p - (p & blockMask) + blockMask + 1;
             for (; p < blockEnd; ++p) {
@@ -54,6 +56,7 @@ class SegmentTree {
             }
         }
 
+        // works in O(1)
         T queryR(int r) {  // sum on interval [0, r)
             if (r == 0) {
                 return 0;

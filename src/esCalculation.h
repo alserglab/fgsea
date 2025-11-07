@@ -30,7 +30,7 @@ struct score_t {
   int64_t coef_NS;
   int64_t diff;   //  n - k
   int64_t coef_const;
-  
+
   double getDouble() const {
       return 1.0 * coef_NS / NS - 1.0 * coef_const / diff;
   }
@@ -72,7 +72,7 @@ struct score_t {
   }
 
   static int64_t getMaxNS() {
-      return int64_t(1e9);
+      return int64_t(1 << 30);
   }
 
   score_t operator-() const {

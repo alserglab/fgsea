@@ -45,7 +45,8 @@ vector<int64_t> EsRuler::scaleRanks(vector<double> const& ranks) {
     int64_t const MAX_NS = score_t::getMaxNS();
     double const curNS = accumulate(ranks.begin(), ranks.end(), double(0));
     vector<int64_t> result(ranks.size());
-    double const scale = MAX_NS / curNS;
+    // keep input integers integer
+    double const scale = floorl(MAX_NS / curNS);
     if (logStatus) {
         Rcpp::Rcout << "Scaling ranks by " << scale << endl;
     }
@@ -130,7 +131,7 @@ EsRuler::hash_t EsRuler::calcHash(const vector<int>& curSample) {
     return res;
 }
 
-void EsRuler::extend(double ES, int seed, double eps) {
+void EsRuler::extend(double ES_double, int seed, double eps) {
     random_engine_t gen(static_cast<uint32_t>(seed));
     int const n = (int) ranks.size();
     int const k = pathwaySize;
@@ -158,7 +159,9 @@ void EsRuler::extend(double ES, int seed, double eps) {
     vector<int> tmp(sampleSize);
     vector<SampleChunks> samplesChunks(sampleSize, SampleChunks(chunksNumber));
 
-    score_t NEED_ES{score_t::getMaxNS(), int64_t(roundl(score_t::getMaxNS() * ES)), n - k, 0};
+    // flooring ES an exact score, but 1.0 should stay 1.0
+    // works best if getMaxNS is a power of two
+    score_t NEED_ES{score_t::getMaxNS(), int64_t(score_t::getMaxNS() * ES_double), 1, 0};
 
     double adjLogPval = 0;
     for (int levelNum = 1; levels.back().bound.first < NEED_ES; ++levelNum) {
@@ -241,7 +244,9 @@ tuple <double, bool, double> EsRuler::getPvalue(double ES_double, double eps, bo
 
     int const n = (int) ranks.size();
     int const k = pathwaySize;
-    score_t ES_score{score_t::getMaxNS(), int64_t(roundl(score_t::getMaxNS() * ES_double)), n - k, 0};
+    // flooring ES an exact score, but 1.0 should stay 1.0
+    // works best if getMaxNS is a power of two
+    score_t ES_score{score_t::getMaxNS(), int64_t(score_t::getMaxNS() * ES_double), 1, 0};
     gsea_t ES{ES_score, 0};
     //  Calculate Pr[<score, hash> >= ES]
 
