@@ -1,3 +1,8 @@
+CHANGES IN VERSION 1.37.1
+* Hash-based resolution of tied gene sets in the multilevel algorithm (by Nikita Golikov), properly fixes #151
+* P-avlues for ES close to 1 are more accurate now 
+* Internally, the gene weights are now converted to integers (with scaling), which might introduce minor result discrepancies in rare cases
+
 CHANGES IN VERSION 1.35.7
 * fix handling of zero stat values with gseaParam=0 in plotEnrichment
 
