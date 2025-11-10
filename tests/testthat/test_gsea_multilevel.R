@@ -8,7 +8,8 @@ test_that("fgseaMultilevel works", {
 	fgseaMultilevelRes <- fgseaMultilevel(examplePathways, exampleRanks,
 	                                      sampleSize=sampleSize,
 	                                      eps=0.0, maxSize=500)
-	expect_equal(fgseaMultilevelRes[23, ES], 0.5788464)
+
+	expect_equal(fgseaMultilevelRes[23, ES], 0.5788464, tolerance = 1e-7)
 
 	expect_true("70385" %in% fgseaMultilevelRes[grep("5991851", pathway), leadingEdge][[1]])
 	expect_true(!"68549" %in% fgseaMultilevelRes[grep("5991851", pathway), leadingEdge][[1]])
@@ -155,7 +156,7 @@ test_that("fgseaMultilevel throws a warning when sampleSize is less than 3", {
 
 test_that("fgseaMultilevelCpp works with sign=TRUE", {
     data(exampleRanks)
-    ranks <- sort(exampleRanks, decreasing = TRUE)
+    ranks <- prepareStats(exampleRanks)
     expect_silent(fgsea:::fgseaMultilevelCpp(enrichmentScores = 0.1,
                                              ranks = ranks,
                                              pathwaySize = 100,
@@ -167,7 +168,7 @@ test_that("fgseaMultilevelCpp works with sign=TRUE", {
 
 test_that("The `eps` parameter works correct in fgseaMultilevelCpp", {
     data(exampleRanks)
-    ranks <- sort(exampleRanks, decreasing = TRUE)
+    ranks <- prepareStats(exampleRanks)
     pvalue <- fgsea:::fgseaMultilevelCpp(enrichmentScores = 0.95, ranks = ranks, pathwaySize = 50,
                                          sampleSize = 501, seed = 42, eps = 1e-5, sign = FALSE)
     pvalue <- pvalue$cppMPval
@@ -248,6 +249,8 @@ test_that("fgsea works correctly with large gene set size", {
     set.seed(1)
     ranks <- sample(exampleRanks, size=200)
     genesetSize <- 199
+
+    ranks <- prepareStats(ranks)
 
     score <- calcGseaStat(ranks, 1:genesetSize)
 

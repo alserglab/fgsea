@@ -37,8 +37,7 @@ fgsea <- function(pathways, stats, minSize = 1, maxSize = length(stats)-1, gseaP
     res
 }
 
-
-preparePathwaysAndStats <- function(pathways, stats, minSize, maxSize, gseaParam, scoreType){
+prepareStats <- function(stats, scoreType="std", gseaParam=1) {
     # Error if stats are non-finite
     if (any(!is.finite(stats))){
         stop("Not all stats values are finite numbers")
@@ -72,7 +71,11 @@ preparePathwaysAndStats <- function(pathways, stats, minSize, maxSize, gseaParam
     # TODO: special treatment for small non-zero values?
     stats <- round(stats * scaleCoeff)
     storage.mode(stats) <- "integer"
+    return(stats)
+}
 
+preparePathwaysAndStats <- function(pathways, stats, minSize, maxSize, gseaParam, scoreType){
+    stats <- prepareStats(stats, scoreType, gseaParam)
     res <- preparePathways(pathways, universe=names(stats), minSize, maxSize)
 
     res$stats <- stats
