@@ -1,6 +1,6 @@
 Package: fgsea
 Title: Fast Gene Set Enrichment Analysis
-Version: 1.37.1
+Version: 1.37.2
 Authors@R: c(person("Gennady", "Korotkevich", role = "aut"),
              person("Vladimir", "Sukhov", role = "aut"),
              person("Nikita", "Golikov", role = "aut"),
@@ -46,5 +46,5 @@ LinkingTo: Rcpp, BH
 RoxygenNote: 7.3.3
 Encoding: UTF-8
 VignetteBuilder: knitr
-URL: https://github.com/ctlab/fgsea/
-BugReports: https://github.com/ctlab/fgsea/issues
+URL: https://github.com/alserglab/fgsea/
+BugReports: https://github.com/alserglab/fgsea/issues
