@@ -224,7 +224,6 @@ calcGseaStat <- function(stats,
 #' data(examplePathways)
 #' data(exampleRanks)
 #' fgseaRes <- fgseaSimple(examplePathways, exampleRanks, nperm=10000, maxSize=500)
-#' # Testing only one pathway is implemented in a more efficient manner
 #' fgseaRes1 <- fgseaSimple(examplePathways[1], exampleRanks, nperm=10000)
 fgseaSimple <- function(pathways,
                         stats,
@@ -617,9 +616,6 @@ fgseaSimpleImpl <- function(pathwayScores, pathwaysSizes,
                             pathwaysFiltered, leadingEdges,
                             permPerProc, seeds,toKeepLength,
                             stats, BPPARAM, scoreType){
-    K <- max(pathwaysSizes)
-    universe <- seq_along(stats)
-
     counts <- bplapply(seq_along(permPerProc), function(i) {
         nperm1 <- permPerProc[i]
         leEs <- rep(0, toKeepLength)
@@ -628,38 +624,20 @@ fgseaSimpleImpl <- function(pathwayScores, pathwaysSizes,
         geZero <- rep(0, toKeepLength)
         leZeroSum <- rep(0, toKeepLength)
         geZeroSum <- rep(0, toKeepLength)
-        if (toKeepLength == 1) {
-            set.seed(seeds[i])
-            for (j in seq_len(nperm1)) {
-                randSample <- sample.int(length(universe), K)
-                randEsP <- calcGseaStat(
-                    stats = stats,
-                    selectedStats = randSample,
-                    gseaParam = 1,
-                    scoreType = scoreType)
-                leEs <- leEs + (randEsP <= pathwayScores)
-                geEs <- geEs + (randEsP >= pathwayScores)
-                leZero <- leZero + (randEsP <= 0)
-                geZero <- geZero + (randEsP >= 0)
-                leZeroSum <- leZeroSum + pmin(randEsP, 0)
-                geZeroSum <- geZeroSum + pmax(randEsP, 0)
-            }
-        } else {
-            aux <- calcGseaStatCumulativeBatch(
-                stats = stats,
-                gseaParam = 1,
-                pathwayScores = pathwayScores,
-                pathwaysSizes = pathwaysSizes,
-                iterations = nperm1,
-                seed = seeds[i],
-                scoreType = scoreType)
-            leEs = get("leEs", aux)
-            geEs = get("geEs", aux)
-            leZero = get("leZero", aux)
-            geZero = get("geZero", aux)
-            leZeroSum = get("leZeroSum", aux)
-            geZeroSum = get("geZeroSum", aux)
-        }
+        aux <- calcGseaStatCumulativeBatch(
+            stats = stats,
+            gseaParam = 1,
+            pathwayScores = pathwayScores,
+            pathwaysSizes = pathwaysSizes,
+            iterations = nperm1,
+            seed = seeds[i],
+            scoreType = scoreType)
+        leEs = get("leEs", aux)
+        geEs = get("geEs", aux)
+        leZero = get("leZero", aux)
+        geZero = get("geZero", aux)
+        leZeroSum = get("leZeroSum", aux)
+        geZeroSum = get("geZeroSum", aux)
         data.table(pathway=seq_len(toKeepLength),
                    leEs=leEs, geEs=geEs,
                    leZero=leZero, geZero=geZero,
@@ -737,7 +715,5 @@ setUpBPPARAM <- function(nproc=0, BPPARAM=NULL){
         return(BPPARAM)
     }
 }
-
-
 
 

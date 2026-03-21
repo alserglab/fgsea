@@ -228,6 +228,83 @@ test_that("fgseaSimpleImpl works correctly in fgseaMultilevel", {
     expect_equal(pval1, pval2)
 })
 
+test_that("fgseaSimpleImpl is reproducible for a single pathway", {
+    stats <- setNames(c(5, 4, 3, 2, 1, -1, -2, -3, -4, -5), paste0("g", 1:10))
+    pathways1 <- list(p1 = c("g1", "g4", "g7"))
+    pathways2 <- list(p1 = c("g1", "g4", "g7"),
+                      p2 = c("g2", "g5", "g8"))
+
+    pp1 <- fgsea:::preparePathwaysAndStats(pathways1, stats, 1, length(stats) - 1, 1, "std")
+    pp2 <- fgsea:::preparePathwaysAndStats(pathways2, stats, 1, length(stats) - 1, 1, "std")
+
+    gseaStatRes1 <- do.call(rbind,
+                            lapply(pp1$filtered, fgsea:::calcGseaStat,
+                                   stats = pp1$stats,
+                                   returnLeadingEdge = TRUE,
+                                   scoreType = "std"))
+    gseaStatRes2 <- do.call(rbind,
+                            lapply(pp2$filtered, fgsea:::calcGseaStat,
+                                   stats = pp2$stats,
+                                   returnLeadingEdge = TRUE,
+                                   scoreType = "std"))
+
+    set.seed(123)
+    seeds <- sample.int(1e9, 1)
+
+    singleRes <- fgsea:::fgseaSimpleImpl(
+        pathwayScores = unlist(gseaStatRes1[, "res"]),
+        pathwaysSizes = pp1$sizes,
+        pathwaysFiltered = pp1$filtered,
+        leadingEdges = mapply("[", list(names(pp1$stats)),
+                              gseaStatRes1[, "leadingEdge"], SIMPLIFY = FALSE),
+        permPerProc = 1000,
+        seeds = seeds,
+        toKeepLength = 1,
+        stats = pp1$stats,
+        BPPARAM = SerialParam(),
+        scoreType = "std"
+    )
+
+    batchRes <- fgsea:::fgseaSimpleImpl(
+        pathwayScores = unlist(gseaStatRes2[, "res"]),
+        pathwaysSizes = pp2$sizes,
+        pathwaysFiltered = pp2$filtered,
+        leadingEdges = mapply("[", list(names(pp2$stats)),
+                              gseaStatRes2[, "leadingEdge"], SIMPLIFY = FALSE),
+        permPerProc = 1000,
+        seeds = seeds,
+        toKeepLength = 2,
+        stats = pp2$stats,
+        BPPARAM = SerialParam(),
+        scoreType = "std"
+    )
+
+    expect_equal(singleRes[, .(ES, NES, pval, nMoreExtreme)],
+                 batchRes[pathway == "p1", .(ES, NES, pval, nMoreExtreme)])
+})
+
+test_that("fgseaMultilevel simple stage matches between single and batch inputs", {
+    stats <- setNames(c(5, 4, 3, 2, 1, -1, -2, -3, -4, -5), paste0("g", 1:10))
+    pathways1 <- list(p1 = c("g1", "g4", "g7"))
+    pathways2 <- list(p1 = c("g1", "g4", "g7"),
+                      p2 = c("g2", "g5", "g8"))
+
+    set.seed(42)
+    singleRes <- fgseaMultilevel(pathways1, stats,
+                                 nPermSimple = 1000,
+                                 sampleSize = 101,
+                                 eps = 1e-10)
+
+    set.seed(42)
+    batchRes <- fgseaMultilevel(pathways2, stats,
+                                nPermSimple = 1000,
+                                sampleSize = 101,
+                                eps = 1e-10)
+
+    expect_equal(singleRes[, .(ES, NES, pval)],
+                 batchRes[pathway == "p1", .(ES, NES, pval)])
+})
+
 test_that("fgsea throws a warning when reaching eps", {
     data(examplePathways)
     data(exampleRanks)
