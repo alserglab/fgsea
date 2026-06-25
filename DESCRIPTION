@@ -1,6 +1,6 @@
 Package: fgsea
 Title: Fast Gene Set Enrichment Analysis
-Version: 1.39.0
+Version: 1.39.2
 Authors@R: c(person("Gennady", "Korotkevich", role = "aut"),
              person("Vladimir", "Sukhov", role = "aut"),
              person("Nikita", "Golikov", role = "aut"),
@@ -36,15 +36,15 @@ Suggests:
     parallel,
     org.Mm.eg.db,
     limma,
-    GEOquery,
+    GEOquery (>= 2.81.21),
     msigdbr,
     aggregation,
     Seurat
 License: MIT + file LICENCE
 LazyData: true
 LinkingTo: Rcpp, BH
-RoxygenNote: 7.3.3
 Encoding: UTF-8
 VignetteBuilder: knitr
 URL: https://github.com/alserglab/fgsea/
 BugReports: https://github.com/alserglab/fgsea/issues
+Config/roxygen2/version: 8.0.0

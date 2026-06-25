@@ -347,7 +347,7 @@ calcGseaStatBatch <- function(stats, selectedStats, geneRanks=seq_along(stats),
 #' \donttest{
 #' library(limma)
 #' library(GEOquery)
-#' es <- getGEO("GSE19429", AnnotGPL = TRUE)[[1]]
+#' es <- getGEO("GSE19429", AnnotGPL = TRUE, returnType = "ExpressionSet")[[1]]
 #' exprs(es) <- normalizeBetweenArrays(log2(exprs(es)+1), method="quantile")
 #' es <- es[!grepl("///", fData(es)$`Gene ID`), ]
 #' es <- es[fData(es)$`Gene ID` != "", ]

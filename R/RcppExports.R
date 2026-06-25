@@ -46,7 +46,7 @@ calcGseaStatBatchCpp <- function(stats, selectedGenes, geneRanks) {
 #' @param moveScale Controls the number of MCMC iterations on each level
 #' @param logStatus Controls whether debug output should be shown
 #' @return table with p-values and estimation errors
-#' @keyword internal
+#' @keywords internal
 fgseaMultilevelCpp <- function(enrichmentScores, ranks, pathwaySize, sampleSize, seed, eps, sign, moveScale = 1.0, logStatus = FALSE) {
     .Call('_fgsea_fgseaMultilevelCpp', PACKAGE = 'fgsea', enrichmentScores, ranks, pathwaySize, sampleSize, seed, eps, sign, moveScale, logStatus)
 }

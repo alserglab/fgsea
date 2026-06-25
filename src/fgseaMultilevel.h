@@ -14,7 +14,7 @@ using namespace Rcpp;
 //' @param moveScale Controls the number of MCMC iterations on each level
 //' @param logStatus Controls whether debug output should be shown
 //' @return table with p-values and estimation errors
-//' @keyword internal
+//' @keywords internal
 // [[Rcpp::export]]
 DataFrame fgseaMultilevelCpp(const NumericVector& enrichmentScores,
                              const SEXP& ranks,
