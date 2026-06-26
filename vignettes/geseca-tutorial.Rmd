@@ -91,7 +91,7 @@ apply log and quantile normalization and filter lowly expressed genes.
 library(GEOquery)
 library(limma)
 
-gse200250 <- getGEO("GSE200250", AnnotGPL = TRUE, returnType = "ExoressuibSet")[[1]]
+gse200250 <- getGEO("GSE200250", AnnotGPL = TRUE, returnType = "ExpressionSet")[[1]]
 
 es <- gse200250
 es <- es[, grep("Th2_", es$title)]
