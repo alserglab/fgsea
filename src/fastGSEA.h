@@ -22,6 +22,7 @@ List calcGseaStatCumulativeBatch(
 //'     sorted in decreasing order (order is not checked)
 //' @param selectedStats indexes of selected genes in a `stats` array
 //' @param gseaParam GSEA weight parameter (0 is unweighted, suggested value is 1)
+//' @param scoreType This parameter defines the GSEA score type. Possible options are ("std", "pos", "neg")
 //' @return Numeric vector of GSEA statistics for all prefixes of selectedStats.
 //' @export
 //' @examples
@@ -29,6 +30,7 @@ List calcGseaStatCumulativeBatch(
 //' data(examplePathways)
 //' ranks <- sort(exampleRanks, decreasing=TRUE)
 //' es <- calcGseaStatCumulative(ranks, na.omit(match(examplePathways[[1]], names(ranks))), 1)
+//' @keywords internal
 // [[Rcpp::export]]
 NumericVector calcGseaStatCumulative(
         NumericVector const& stats,

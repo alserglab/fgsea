@@ -13,6 +13,8 @@ sorted in decreasing order (order is not checked)}
 \item{selectedStats}{indexes of selected genes in a `stats` array}
 
 \item{gseaParam}{GSEA weight parameter (0 is unweighted, suggested value is 1)}
+
+\item{scoreType}{This parameter defines the GSEA score type. Possible options are ("std", "pos", "neg")}
 }
 \value{
 Numeric vector of GSEA statistics for all prefixes of selectedStats.
@@ -26,3 +28,4 @@ data(examplePathways)
 ranks <- sort(exampleRanks, decreasing=TRUE)
 es <- calcGseaStatCumulative(ranks, na.omit(match(examplePathways[[1]], names(ranks))), 1)
 }
+\keyword{internal}
