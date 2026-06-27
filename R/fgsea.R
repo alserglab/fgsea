@@ -726,7 +726,7 @@ setUpBPPARAM <- function(nproc=0, BPPARAM=NULL){
                 # windows doesn't support multicore, using snow instead
                 result <- SnowParam(workers = nproc, progressbar = TRUE)
             } else {
-                result <- MulticoreParam(workers = nproc, progress = TRUE)
+                result <- MulticoreParam(workers = nproc, progressbar = TRUE)
             }
         } else {
             result <- bpparam()
