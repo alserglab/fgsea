@@ -1,7 +1,7 @@
 #' Simple overrepresentation analysis based on hypergeometric test
 #' @param pathways List of gene sets to check.
 #' @param genes Set of query genes
-#' @param universe A universe from whiche `genes` were selected
+#' @param universe A universe from which `genes` were selected
 #' @param minSize Minimal size of a gene set to test. All pathways below the threshold are excluded.
 #' @param maxSize Maximal size of a gene set to test. All pathways above the threshold are excluded.
 #' @return A table with ORA results. Each row corresponds to a tested pathway.
@@ -79,7 +79,7 @@ fora <- function(pathways, genes, universe, minSize=1, maxSize=length(universe)-
 #' @param pathways List of pathways, should contain all the pathways present in
 #'                 `fgseaRes`.
 #' @param genes Set of query genes, same as in `fora()`
-#' @param universe A universe from whiche `genes` were selected, same as in `fora()`
+#' @param universe A universe from which `genes` were selected, same as in `fora()`
 #' @param pval.threshold Two pathways are considered dependent when p-value
 #'                       of enrichment of one pathways on background of another
 #'                       is greater then `pval.threshold`.
